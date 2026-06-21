@@ -1,4 +1,0 @@
-INFO:     127.0.0.1:52928 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60955 - "POST /tenants HTTP/1.1" 201 Created
-INFO:     127.0.0.1:60955 - "GET /tenants/5fbb1a58-9ca1-4da5-9772-07126820c0b2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60956 - "POST /tenants HTTP/1.1" 422 Unprocessable Entity
