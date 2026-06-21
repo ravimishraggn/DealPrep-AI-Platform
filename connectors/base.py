@@ -27,6 +27,19 @@ class ConfigValidationError(Exception):
         super().__init__(f"{len(errors)} config validation error(s)")
 
 
+def _jsonable_errors(exc: ValidationError) -> list[dict[str, Any]]:
+    """Pydantic error list, stripped of non-JSON-serializable bits (e.g. a
+    ValueError carried in `ctx`), so it can be returned in an HTTP response."""
+    clean: list[dict[str, Any]] = []
+    for err in exc.errors(include_url=False):
+        item = {k: v for k, v in err.items() if k != "ctx"}
+        item["loc"] = list(err.get("loc", ()))
+        if "ctx" in err:
+            item["ctx"] = {k: str(v) for k, v in err["ctx"].items()}
+        clean.append(item)
+    return clean
+
+
 class BaseConnector(ABC):
     # Each connector declares its own typed config model (ADR D3).
     config_schema: ClassVar[type[BaseModel]]
@@ -47,7 +60,7 @@ class BaseConnector(ABC):
         try:
             return cls.config_schema.model_validate(raw)
         except ValidationError as exc:
-            raise ConfigValidationError(exc.errors(include_url=False)) from exc
+            raise ConfigValidationError(_jsonable_errors(exc)) from exc
 
     @abstractmethod
     def test_connection(self) -> None:

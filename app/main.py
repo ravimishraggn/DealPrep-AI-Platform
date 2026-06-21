@@ -10,15 +10,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.db import init_db
-from app.routers import tenants
+from app.registry import discover
+from app.routers import secrets, sources, tenants
+from app.runner import shutdown_runner, start_runner
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    # (Phase 2) discover_connectors() and (Phase 4) start scheduler will hook in here.
+    discover()  # import connectors/ so plugins self-register (ADR D2)
+    start_runner()  # APScheduler picks up active manifests (ADR D6)
     yield
-    # (Phase 4) scheduler shutdown will hook in here.
+    shutdown_runner()
 
 
 app = FastAPI(
@@ -29,6 +32,8 @@ app = FastAPI(
 )
 
 app.include_router(tenants.router)
+app.include_router(sources.router)
+app.include_router(secrets.router)
 
 
 @app.get("/health", tags=["meta"])
