@@ -23,7 +23,9 @@ Architecture decisions are recorded in
 | Scheduled, generic pipeline runner | APScheduler (in-process) |
 | Tenant-isolated output | `data/{tenant_id}/{source_id}/*.json` |
 
-Interactive API docs are served at **`/docs`** when the app is running.
+A **minimal browser console** is served at **`/`** (→ `/ui/`) — register a tenant, store a
+secret, submit + dry-run a source, and watch scheduled runs live, no curl needed.
+Interactive API docs are at **`/docs`**.
 
 ---
 
@@ -85,7 +87,15 @@ python -m venv .venv
 
 # 2. start the API (SQLite DB + scheduler boot automatically)
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8077
+
+# 3. (optional, for testing the REST connector) start the stub endpoint in another terminal
+.\.venv\Scripts\python.exe examples\stub_rest_api.py 8099
 ```
+
+Then open **http://127.0.0.1:8077/** in a browser and use the console:
+register a tenant → (optional) store a secret → submit a source (the form pre-fills a
+working config) → watch the **Sources** and **Run history** panels update as the scheduler
+runs. The REST template points at the stub from step 3.
 
 ```bash
 # macOS/Linux equivalent

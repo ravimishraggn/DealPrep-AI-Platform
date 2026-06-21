@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DealPrep Ingestion — Console</title>
+<style>
+  :root {
+    --bg:#0f1419; --panel:#1a2230; --panel2:#141b27; --line:#2a3441;
+    --text:#e6edf3; --muted:#8b98a9; --accent:#4f9cf9; --ok:#3fb950; --bad:#f85149;
+    --chip:#243044;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:18px 24px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:12px; }
+  header h1 { font-size:18px; margin:0; }
+  header .sub { color:var(--muted); font-size:13px; }
+  .wrap { display:grid; grid-template-columns:380px 1fr; gap:18px; padding:18px 24px; align-items:start; }
+  .col { display:flex; flex-direction:column; gap:18px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 12px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+  input, textarea, select {
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    border-radius:7px; padding:8px 10px; font:inherit;
+  }
+  textarea { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12.5px; min-height:150px; resize:vertical; }
+  button {
+    margin-top:12px; background:var(--accent); color:#04101f; border:0; border-radius:7px;
+    padding:9px 14px; font-weight:600; cursor:pointer;
+  }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--line); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .row > * { margin-top:0; }
+  .tenant-box { background:var(--chip); border-radius:7px; padding:10px 12px; font-size:13px; }
+  .tenant-box code { color:var(--accent); word-break:break-all; }
+  .muted { color:var(--muted); }
+  .out { margin-top:12px; font-family:ui-monospace,Consolas,monospace; font-size:12px; white-space:pre-wrap;
+    background:var(--panel2); border:1px solid var(--line); border-radius:7px; padding:10px; max-height:240px; overflow:auto; }
+  .out.ok { border-color:#1f6f33; }
+  .out.bad { border-color:#73221f; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:600; }
+  .pill.success { background:rgba(63,185,80,.15); color:var(--ok); }
+  .pill.failure { background:rgba(248,81,73,.15); color:var(--bad); }
+  .pill.none { background:var(--chip); color:var(--muted); }
+  .pill.active { background:rgba(79,156,249,.15); color:var(--accent); }
+  a.link { color:var(--accent); cursor:pointer; text-decoration:none; }
+  .hint { font-size:12px; color:var(--muted); margin-top:6px; }
+  .hint code { background:var(--panel2); padding:1px 5px; border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DealPrep Ingestion Console</h1>
+  <span class="sub">register a team · submit + dry-run a source · watch scheduled runs</span>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: actions -->
+  <div class="col">
+    <!-- Tenant -->
+    <div class="card">
+      <h2>1 · Tenant</h2>
+      <div id="tenantActive" style="display:none">
+        <div class="tenant-box">
+          <div><b id="tName"></b></div>
+          <div class="muted">id <code id="tId"></code></div>
+          <div class="muted">namespace <code id="tNs"></code></div>
+        </div>
+        <button class="ghost" onclick="clearTenant()">Switch / new tenant</button>
+      </div>
+      <div id="tenantForm">
+        <label>Team name</label>
+        <input id="f_name" placeholder="Comps Team" />
+        <label>Owner email</label>
+        <input id="f_email" placeholder="analyst@comps.example.com" />
+        <label>Use case</label>
+        <input id="f_usecase" placeholder="Pull comps multiples" />
+        <button onclick="registerTenant()">Register tenant</button>
+        <div class="hint">Already have one? <a class="link" onclick="useExisting()">paste a tenant_id</a></div>
+      </div>
+      <div id="tenantOut"></div>
+    </div>
+
+    <!-- Secret -->
+    <div class="card">
+      <h2>2 · Secret (optional)</h2>
+      <div class="muted" style="font-size:12px">Stash a value under a name; manifests reference the name, never the raw value.</div>
+      <label>Secret ref (name)</label>
+      <input id="s_ref" placeholder="comps-api-token" />
+      <label>Secret value</label>
+      <input id="s_val" placeholder="super-secret-xyz" />
+      <button onclick="storeSecret()">Store secret</button>
+      <div id="secretOut"></div>
+    </div>
+
+    <!-- Source -->
+    <div class="card">
+      <h2>3 · Submit source (validates + dry-run)</h2>
+      <label>Connector type</label>
+      <select id="c_type" onchange="loadTemplate()">
+        <option value="rest_api">rest_api — paginated REST poll</option>
+        <option value="file_upload">file_upload — watch a directory</option>
+      </select>
+      <label>Config (JSON)</label>
+      <textarea id="c_config" spellcheck="false"></textarea>
+      <button id="submitBtn" onclick="submitSource()">Validate &amp; submit</button>
+      <div class="hint" id="restHint">Tip: start the stub API first — <code>python examples/stub_rest_api.py 8099</code></div>
+      <div id="sourceOut"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: status -->
+  <div class="col">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Sources &amp; last run</h2>
+        <button class="ghost" style="margin:0" onclick="refreshSources()">Refresh</button>
+      </div>
+      <table id="srcTable">
+        <thead><tr><th>Connector</th><th>Status</th><th>Last run</th><th>Records</th><th></th></tr></thead>
+        <tbody><tr><td colspan="5" class="muted">No tenant selected.</td></tr></tbody>
+      </table>
+      <div class="hint">Scheduled runs appear within ~10s (dev demo mode clamps the interval).</div>
+    </div>
+
+    <div class="card">
+      <h2 id="runsTitle">Run history</h2>
+      <table id="runTable">
+        <thead><tr><th>#</th><th>Status</th><th>Records</th><th>Started</th><th>Output / error</th></tr></thead>
+        <tbody><tr><td colspan="5" class="muted">Pick a source → “runs”.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const TEMPLATES = {
+  rest_api: {
+    base_url: "http://127.0.0.1:8099/",
+    auth_type: "none",
+    records_path: "data",
+    poll_interval_seconds: 300
+  },
+  file_upload: {
+    directory: "dropzone",
+    glob: "*.json",
+    poll_interval_seconds: 300
+  }
+};
+
+let tenantId = localStorage.getItem("dp_tenant_id") || null;
+
+function setOut(el, data, ok) {
+  el.className = "out " + (ok ? "ok" : "bad");
+  el.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+}
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  let body = null;
+  try { body = await res.json(); } catch { body = null; }
+  if (!res.ok) {
+    const detail = body && body.detail !== undefined ? body.detail : body;
+    throw { status: res.status, detail };
+  }
+  return body;
+}
+
+function loadTemplate() {
+  const t = document.getElementById("c_type").value;
+  document.getElementById("c_config").value = JSON.stringify(TEMPLATES[t], null, 2);
+  document.getElementById("restHint").style.display = t === "rest_api" ? "" : "none";
+}
+
+function renderTenant() {
+  const active = document.getElementById("tenantActive");
+  const form = document.getElementById("tenantForm");
+  if (tenantId) {
+    active.style.display = "";
+    form.style.display = "none";
+    document.getElementById("tId").textContent = tenantId;
+  } else {
+    active.style.display = "none";
+    form.style.display = "";
+  }
+}
+
+async function registerTenant() {
+  const body = {
+    name: document.getElementById("f_name").value.trim(),
+    owner_email: document.getElementById("f_email").value.trim(),
+    use_case: document.getElementById("f_usecase").value.trim(),
+  };
+  try {
+    const t = await api("/tenants", {
+      method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body)
+    });
+    tenantId = t.id;
+    localStorage.setItem("dp_tenant_id", t.id);
+    document.getElementById("tName").textContent = t.name;
+    document.getElementById("tNs").textContent = t.namespace;
+    renderTenant();
+    setOut(document.getElementById("tenantOut"), "Registered ✓  namespace " + t.namespace, true);
+    refreshSources();
+  } catch (e) {
+    setOut(document.getElementById("tenantOut"), e.detail || e, false);
+  }
+}
+
+function useExisting() {
+  const id = prompt("Paste an existing tenant_id:");
+  if (id) {
+    tenantId = id.trim();
+    localStorage.setItem("dp_tenant_id", tenantId);
+    document.getElementById("tName").textContent = "(existing tenant)";
+    document.getElementById("tNs").textContent = "—";
+    renderTenant();
+    refreshSources();
+  }
+}
+
+function clearTenant() {
+  tenantId = null;
+  localStorage.removeItem("dp_tenant_id");
+  renderTenant();
+  document.querySelector("#srcTable tbody").innerHTML =
+    '<tr><td colspan="5" class="muted">No tenant selected.</td></tr>';
+}
+
+async function storeSecret() {
+  const body = {
+    ref: document.getElementById("s_ref").value.trim(),
+    value: document.getElementById("s_val").value,
+  };
+  try {
+    const r = await api("/secrets", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)
+    });
+    setOut(document.getElementById("secretOut"), "Stored ✓  ref “" + r.ref + "”", true);
+  } catch (e) {
+    setOut(document.getElementById("secretOut"), e.detail || e, false);
+  }
+}
+
+async function submitSource() {
+  if (!tenantId) { alert("Register or select a tenant first."); return; }
+  const out = document.getElementById("sourceOut");
+  let config;
+  try { config = JSON.parse(document.getElementById("c_config").value); }
+  catch (e) { setOut(out, "Config is not valid JSON: " + e.message, false); return; }
+
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true; btn.textContent = "Running dry-run…";
+  try {
+    const src = await api(`/tenants/${tenantId}/sources`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ connector_type: document.getElementById("c_type").value, config })
+    });
+    setOut(out, "Dry-run passed ✓  source " + src.id + " is active.", true);
+    refreshSources();
+  } catch (e) {
+    setOut(out, e.detail || e, false);
+  } finally {
+    btn.disabled = false; btn.textContent = "Validate & submit";
+  }
+}
+
+function pill(status) {
+  const s = status || "none";
+  const label = status || "—";
+  return `<span class="pill ${s}">${label}</span>`;
+}
+
+async function refreshSources() {
+  if (!tenantId) return;
+  const tb = document.querySelector("#srcTable tbody");
+  try {
+    const rows = await api(`/tenants/${tenantId}/sources`);
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="muted">No sources yet.</td></tr>'; return; }
+    tb.innerHTML = rows.map(s => `
+      <tr>
+        <td><b>${s.connector_type}</b><br><span class="muted" style="font-size:11px">${s.id.slice(0,8)}…</span></td>
+        <td>${pill(s.status)}</td>
+        <td>${pill(s.last_run_status)}<br><span class="muted" style="font-size:11px">${s.last_run_at ? new Date(s.last_run_at).toLocaleTimeString() : ""}</span></td>
+        <td>${s.last_run_record_count ?? "—"}</td>
+        <td><a class="link" onclick="viewRuns('${s.id}','${s.connector_type}')">runs ›</a></td>
+      </tr>`).join("");
+  } catch (e) {
+    tb.innerHTML = `<tr><td colspan="5" class="out bad">${JSON.stringify(e.detail||e)}</td></tr>`;
+  }
+}
+
+async function viewRuns(sourceId, connType) {
+  document.getElementById("runsTitle").textContent = `Run history — ${connType} (${sourceId.slice(0,8)}…)`;
+  const tb = document.querySelector("#runTable tbody");
+  try {
+    const runs = await api(`/tenants/${tenantId}/sources/${sourceId}/runs`);
+    if (!runs.length) { tb.innerHTML = '<tr><td colspan="5" class="muted">No runs yet — wait ~10s.</td></tr>'; return; }
+    tb.innerHTML = runs.map(r => `
+      <tr>
+        <td>${r.id}</td>
+        <td>${pill(r.status)}</td>
+        <td>${r.record_count}</td>
+        <td><span class="muted">${new Date(r.started_at).toLocaleTimeString()}</span></td>
+        <td style="max-width:340px"><span class="muted" style="font-size:11px;word-break:break-all">${r.error ? "⚠ "+r.error : (r.output_path || "")}</span></td>
+      </tr>`).join("");
+  } catch (e) {
+    tb.innerHTML = `<tr><td colspan="5" class="out bad">${JSON.stringify(e.detail||e)}</td></tr>`;
+  }
+}
+
+// init
+loadTemplate();
+renderTenant();
+if (tenantId) {
+  document.getElementById("tName").textContent = "(saved tenant)";
+  document.getElementById("tNs").textContent = "—";
+  refreshSources();
+}
+// auto-refresh sources every 8s so scheduled runs show up live
+setInterval(() => { if (tenantId) refreshSources(); }, 8000);
+</script>
+</body>
+</html>

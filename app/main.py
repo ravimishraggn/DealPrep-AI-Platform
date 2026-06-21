@@ -6,8 +6,11 @@ connector discovery and the APScheduler pipeline runner.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.db import init_db
 from app.registry import discover
@@ -39,3 +42,12 @@ app.include_router(secrets.router)
 @app.get("/health", tags=["meta"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# Minimal browser console (static, no build step) served by the app itself.
+app.mount("/ui", StaticFiles(directory=Path(__file__).parent / "static", html=True), name="ui")
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/ui/")
