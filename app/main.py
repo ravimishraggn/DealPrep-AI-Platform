@@ -16,15 +16,19 @@ from app.db import init_db
 from app.registry import discover
 from app.routers import secrets, sources, tenants
 from app.runner import shutdown_runner, start_runner
+from pipeline.extractors.registry import discover_extractors
+from pipeline.indexing.graph.neo4j_client import close_driver
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    discover()  # import connectors/ so plugins self-register (ADR D2)
-    start_runner()  # APScheduler picks up active manifests (ADR D6)
+    discover()  # import connectors/ so plugins self-register (ADR 0001 D2)
+    discover_extractors()  # import extractors/ so they self-register (ADR 0004)
+    start_runner()  # APScheduler picks up active manifests (ADR 0001 D6)
     yield
     shutdown_runner()
+    close_driver()  # release the Neo4j driver if it was opened
 
 
 app = FastAPI(

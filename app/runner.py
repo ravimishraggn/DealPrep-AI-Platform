@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.db import SessionLocal
-from app.models import RunHistory, RunStatus, Source, SourceStatus
+from app.models import RunHistory, RunStage, RunStatus, Source, SourceStatus
 from app.registry import build_connector
 from app.secrets import get_vault
 from app.writer import TenantOutputWriter
@@ -46,6 +46,39 @@ def _effective_interval(source: Source) -> int:
     return max(interval, 1)
 
 
+def _run_pipeline(session, run_id: int, source, records) -> None:
+    """Run the extraction → indexing pipeline and log each stage to run_stages.
+
+    Imported lazily so the heavy pipeline/ML stack only loads when an ingestion
+    run actually produces records. A pipeline-level failure is recorded as a
+    failed stage but does not fail the ingestion run itself (the raw data already
+    landed successfully).
+    """
+    from app.models import StageStatus
+    from pipeline.orchestrator import get_orchestrator
+
+    try:
+        outcome = get_orchestrator().run(records, source.tenant_id, source.id)
+        stages = outcome.stages
+    except Exception as exc:  # noqa: BLE001 - pipeline error must not fail ingestion
+        logger.exception("pipeline failed for source %s", source.id)
+        session.add(
+            RunStage(
+                run_id=run_id, tenant_id=source.tenant_id,
+                stage="pipeline", status=StageStatus.failure, detail=str(exc),
+            )
+        )
+        return
+
+    for sr in stages:
+        session.add(
+            RunStage(
+                run_id=run_id, tenant_id=source.tenant_id, stage=sr.stage,
+                status=sr.status, detail=sr.detail, item_count=sr.item_count,
+            )
+        )
+
+
 def run_source(source_id: str) -> None:
     """Execute one ingestion run for a source. Logged to run_history either way."""
     session = SessionLocal()
@@ -75,6 +108,12 @@ def run_source(source_id: str) -> None:
             run.record_count = len(records)
             run.output_path = output_path
             run.finished_at = _utcnow()
+            session.add(run)
+            session.flush()  # assign run.id so stage rows can reference it
+
+            # Auto-chain the full extraction → indexing pipeline (ADR 0007).
+            if records:
+                _run_pipeline(session, run.id, source, records)
 
             source.last_run_at = run.finished_at
             source.last_run_status = RunStatus.success
