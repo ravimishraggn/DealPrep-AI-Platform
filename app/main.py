@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.db import init_db
 from app.registry import discover
-from app.routers import secrets, sources, tenants
+from app.routers import search, secrets, sources, tenants
 from app.runner import shutdown_runner, start_runner
 from pipeline.extractors.registry import discover_extractors
 from pipeline.indexing.graph.neo4j_client import close_driver
@@ -41,6 +41,7 @@ app = FastAPI(
 app.include_router(tenants.router)
 app.include_router(sources.router)
 app.include_router(secrets.router)
+app.include_router(search.router)
 
 
 @app.get("/health", tags=["meta"])
