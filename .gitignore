@@ -9,6 +9,7 @@ venv/
 *.db
 *.sqlite3
 /data/
+/dropzone/
 
 # Server logs (runtime artifacts)
 server.log
