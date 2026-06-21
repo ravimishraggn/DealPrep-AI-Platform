@@ -149,6 +149,37 @@ class Neo4jClient:
             )
             return [dict(rec) for rec in result]
 
+    def list_graph(self, tenant_id: str, limit: int = 100) -> dict:
+        """Return a tenant's entities and relationships for the "show data" UI.
+
+        Args:
+            tenant_id: REQUIRED tenant filter.
+            limit: Max entities and max relationships to return.
+
+        Returns:
+            ``{entities: [{name, type}], relationships: [{subject, relationship,
+            object, file_ref}]}`` — all tenant-filtered.
+        """
+        _require_tenant(tenant_id)
+        with get_driver().session() as session:
+            ents = session.run(
+                "MATCH (e:Entity {tenant_id: $tenant_id}) "
+                "RETURN e.name AS name, e.type AS type ORDER BY e.name LIMIT $limit",
+                tenant_id=tenant_id, limit=limit,
+            )
+            entities = [dict(r) for r in ents]
+            rels = session.run(
+                """
+                MATCH (a:Entity {tenant_id: $tenant_id})-[r:RELATED {tenant_id: $tenant_id}]->(b:Entity {tenant_id: $tenant_id})
+                RETURN a.name AS subject, r.type AS relationship, b.name AS object,
+                       r.original_file_reference AS file_ref
+                ORDER BY a.name LIMIT $limit
+                """,
+                tenant_id=tenant_id, limit=limit,
+            )
+            relationships = [dict(r) for r in rels]
+        return {"entities": entities, "relationships": relationships}
+
     def list_entities(self, tenant_id: str, limit: int = 200) -> list[str]:
         """Return entity display names for a tenant (used to detect query mentions)."""
         _require_tenant(tenant_id)

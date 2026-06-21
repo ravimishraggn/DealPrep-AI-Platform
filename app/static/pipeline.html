@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DealPrep — Pipeline & Retrieval Console</title>
+<style>
+  :root {
+    --bg:#0f1419; --panel:#1a2230; --panel2:#141b27; --line:#2a3441;
+    --text:#e6edf3; --muted:#8b98a9; --accent:#4f9cf9; --ok:#3fb950; --bad:#f85149;
+    --pg:#5b9bd5; --chroma:#c08cf0; --neo:#4fc3a1; --chip:#243044;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; }
+  header .sub { color:var(--muted); font-size:12.5px; }
+  header a { color:var(--accent); font-size:12.5px; text-decoration:none; margin-left:auto; }
+  .wrap { padding:18px 24px; display:grid; grid-template-columns:360px 1fr; gap:18px; align-items:start; }
+  .col { display:flex; flex-direction:column; gap:16px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 12px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+  input, textarea, select { width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:7px; padding:8px 10px; font:inherit; }
+  button { background:var(--accent); color:#04101f; border:0; border-radius:7px; padding:8px 13px; font-weight:600; cursor:pointer; margin-top:10px; }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--line); }
+  button.sm { padding:5px 10px; font-size:12px; margin-top:0; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .tenant-box { background:var(--chip); border-radius:7px; padding:9px 12px; font-size:12.5px; }
+  .tenant-box code { color:var(--accent); word-break:break-all; }
+  .muted { color:var(--muted); }
+  .out { margin-top:10px; font-family:ui-monospace,Consolas,monospace; font-size:12px; white-space:pre-wrap; background:var(--panel2); border:1px solid var(--line); border-radius:7px; padding:9px; }
+  .out.ok { border-color:#1f6f33; } .out.bad { border-color:#73221f; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+  .engine { border:1px solid var(--line); border-radius:8px; padding:10px; background:var(--panel2); }
+  .engine h3 { margin:0 0 8px; font-size:12px; display:flex; align-items:center; gap:6px; }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .hit { border-bottom:1px solid var(--line); padding:7px 0; font-size:12.5px; }
+  .hit:last-child { border-bottom:0; }
+  .hit .score { color:var(--ok); font-weight:600; font-size:11px; }
+  .ref { color:var(--muted); font-size:11px; word-break:break-all; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .tab { padding:6px 12px; border:1px solid var(--line); border-radius:99px; cursor:pointer; font-size:12.5px; color:var(--muted); }
+  .tab.active { color:var(--text); border-color:var(--accent); background:rgba(79,156,249,.12); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th,td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-size:11px; text-transform:uppercase; }
+  code.k { background:var(--panel2); padding:1px 5px; border-radius:4px; font-size:11px; }
+  .pill { display:inline-block; padding:1px 7px; border-radius:99px; font-size:10.5px; font-weight:600; }
+  .pill.success { background:rgba(63,185,80,.15); color:var(--ok); }
+  .pill.failure { background:rgba(248,81,73,.15); color:var(--bad); }
+  .pill.skipped { background:var(--chip); color:var(--muted); }
+  .triple { font-family:ui-monospace,Consolas,monospace; font-size:12px; }
+  .triple .rel { color:var(--neo); }
+</style>
+</head>
+<body>
+<header>
+  <h1>DealPrep · Pipeline & Retrieval Console</h1>
+  <span class="sub">upload → auto-index into Postgres · ChromaDB · Neo4j → search · inspect each store</span>
+  <a href="/ui/">← onboarding console</a>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: controls -->
+  <div class="col">
+    <div class="card">
+      <h2>1 · Tenant</h2>
+      <div id="tenantActive" style="display:none">
+        <div class="tenant-box">id <code id="tId"></code></div>
+        <button class="ghost sm" style="margin-top:8px" onclick="clearTenant()">switch / new</button>
+      </div>
+      <div id="tenantForm">
+        <label>Team name</label>
+        <input id="f_name" placeholder="Comps Team" />
+        <label>Owner email</label>
+        <input id="f_email" placeholder="analyst@comps.example.com" />
+        <button onclick="registerTenant()">Register</button>
+        <div class="muted" style="font-size:12px;margin-top:6px">or <a class="ghost" style="border:0;color:var(--accent);cursor:pointer" onclick="useExisting()">paste a tenant_id</a></div>
+      </div>
+      <div id="tenantOut"></div>
+    </div>
+
+    <div class="card">
+      <h2>2 · Ingest</h2>
+      <div class="muted" style="font-size:12px">Upload JSON / PDF / CSV / TXT — the pipeline extracts, chunks, and indexes into all three stores automatically.</div>
+      <input type="file" id="files" multiple style="margin-top:10px" />
+      <div class="row">
+        <button onclick="uploadFiles()">Upload &amp; ingest</button>
+        <button class="ghost" onclick="loadSampleJson()">Load sample JSON</button>
+      </div>
+      <div id="ingestOut"></div>
+    </div>
+
+    <div class="card">
+      <h2>3 · Unified search</h2>
+      <input id="q" placeholder="e.g. Acme Corp" onkeydown="if(event.key==='Enter')runSearch()" />
+      <button onclick="runSearch()">Search all three</button>
+      <div id="searchOut"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: results + data -->
+  <div class="col">
+    <div class="card">
+      <h2>Search results <span class="muted" style="text-transform:none">— labeled by engine, traceable to source</span></h2>
+      <div class="grid3">
+        <div class="engine"><h3><span class="dot" style="background:var(--chroma)"></span>Vector (ChromaDB)</h3><div id="r_vector"><span class="muted">—</span></div></div>
+        <div class="engine"><h3><span class="dot" style="background:var(--pg)"></span>Structured (Postgres)</h3><div id="r_structured"><span class="muted">—</span></div></div>
+        <div class="engine"><h3><span class="dot" style="background:var(--neo)"></span>Graph (Neo4j)</h3><div id="r_graph"><span class="muted">—</span></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Show stored data — what's in each store</h2>
+      <div class="tabs">
+        <div class="tab active" data-t="structured" onclick="showData('structured')">🟦 Postgres</div>
+        <div class="tab" data-t="vectors" onclick="showData('vectors')">🟪 ChromaDB</div>
+        <div class="tab" data-t="graph" onclick="showData('graph')">🟩 Neo4j</div>
+        <div class="tab" data-t="runs" onclick="showData('runs')">⚙️ Pipeline runs</div>
+        <button class="ghost sm" style="margin-left:auto" onclick="showData(currentTab)">↻ refresh</button>
+      </div>
+      <div id="dataPanel"><span class="muted">Pick a store to see what's stored for this tenant.</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let tenantId = localStorage.getItem("dp_tenant_id") || null;
+let currentTab = "structured";
+
+function setOut(el, data, ok) { el.className = "out " + (ok ? "ok" : "bad"); el.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  let body=null; try { body = await res.json(); } catch {}
+  if (!res.ok) throw { status: res.status, detail: body && body.detail !== undefined ? body.detail : body };
+  return body;
+}
+
+function renderTenant() {
+  document.getElementById("tenantActive").style.display = tenantId ? "" : "none";
+  document.getElementById("tenantForm").style.display = tenantId ? "none" : "";
+  if (tenantId) document.getElementById("tId").textContent = tenantId;
+}
+async function registerTenant() {
+  try {
+    const t = await api("/tenants", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ name: document.getElementById("f_name").value.trim() || "Console Team",
+        owner_email: document.getElementById("f_email").value.trim() || "console@example.com", use_case: "pipeline console" }) });
+    tenantId = t.id; localStorage.setItem("dp_tenant_id", t.id); renderTenant();
+    setOut(document.getElementById("tenantOut"), "Registered ✓ namespace " + t.namespace, true);
+  } catch (e) { setOut(document.getElementById("tenantOut"), e.detail || e, false); }
+}
+function useExisting(){ const id = prompt("tenant_id:"); if(id){ tenantId=id.trim(); localStorage.setItem("dp_tenant_id",tenantId); renderTenant(); } }
+function clearTenant(){ tenantId=null; localStorage.removeItem("dp_tenant_id"); renderTenant(); }
+
+async function uploadFiles() {
+  if (!tenantId) return alert("Register or select a tenant first.");
+  const input = document.getElementById("files");
+  if (!input.files.length) return alert("Pick at least one file.");
+  const fd = new FormData();
+  for (const f of input.files) fd.append("files", f);
+  await doUpload(fd, `${input.files.length} file(s)`);
+}
+async function loadSampleJson() {
+  if (!tenantId) return alert("Register or select a tenant first.");
+  const sample = { company: "Acme Corp", ev_ebitda: 13.5, sponsor: "Falcon Capital",
+    note: "Acme Corp reported EBITDA includes related-party revenue from Falcon Capital. Jane Smith sits on the board of Acme Corp." };
+  const fd = new FormData();
+  fd.append("files", new Blob([JSON.stringify(sample)], { type: "application/json" }), "sample_deal.json");
+  await doUpload(fd, "sample_deal.json");
+}
+async function doUpload(fd, label) {
+  const out = document.getElementById("ingestOut");
+  setOut(out, "uploading " + label + " …", true);
+  try {
+    const r = await api(`/tenants/${tenantId}/ingest/upload`, { method:"POST", body: fd });
+    setOut(out, "Uploaded ✓ " + r.saved.join(", ") + "\nPipeline indexing… (auto, ~10s). Watch 'Pipeline runs'.", true);
+    setTimeout(() => showData("runs"), 4000);
+  } catch (e) { setOut(out, e.detail || e, false); }
+}
+
+async function runSearch() {
+  if (!tenantId) return alert("Register or select a tenant first.");
+  const q = document.getElementById("q").value.trim() || "Acme Corp";
+  setOut(document.getElementById("searchOut"), "searching…", true);
+  try {
+    const r = await api(`/tenants/${tenantId}/search`, { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ query: q, k: 5 }) });
+    document.getElementById("searchOut").textContent = "";
+    document.getElementById("r_vector").innerHTML = r.vector.length ? r.vector.map(v =>
+      `<div class="hit"><span class="score">${v.score}</span> ${esc(v.text).slice(0,90)}…<div class="ref">${esc(v.metadata.original_file_reference)} · ${esc(v.metadata.section_type)}</div></div>`).join("") : '<span class="muted">no hits</span>';
+    document.getElementById("r_structured").innerHTML = r.structured.length ? r.structured.map(s =>
+      `<div class="hit"><span class="score">${s.score}</span> ${esc(JSON.stringify(s.fields)).slice(0,110)}<div class="ref">${esc(s.metadata.record_type)} · ${esc(s.metadata.original_file_reference)}</div></div>`).join("") : '<span class="muted">no hits</span>';
+    document.getElementById("r_graph").innerHTML = r.graph.length ? r.graph.map(g =>
+      `<div class="hit triple">(${esc(g.subject)}) <span class="rel">-[${esc(g.relationship)}]→</span> (${esc(g.object)})<div class="ref">${esc(g.file_ref||"")}</div></div>`).join("") : '<span class="muted">no hits</span>';
+    if (r.warnings && r.warnings.length) setOut(document.getElementById("searchOut"), "warnings: " + r.warnings.join("; "), false);
+  } catch (e) { setOut(document.getElementById("searchOut"), e.detail || e, false); }
+}
+
+async function showData(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.t === tab));
+  const panel = document.getElementById("dataPanel");
+  if (!tenantId) { panel.innerHTML = '<span class="muted">Register or select a tenant first.</span>'; return; }
+  panel.innerHTML = '<span class="muted">loading…</span>';
+  try {
+    if (tab === "structured") {
+      const d = await api(`/tenants/${tenantId}/inspect/structured?limit=50`);
+      panel.innerHTML = `<div class="muted" style="margin-bottom:8px">Postgres · ${d.count} structured record(s)</div>` + (d.items.length ?
+        `<table><thead><tr><th>type</th><th>fields (JSONB)</th><th>source</th></tr></thead><tbody>` +
+        d.items.map(r => `<tr><td><code class="k">${esc(r.record_type)}</code></td><td>${esc(JSON.stringify(r.fields))}</td><td class="ref">${esc(r.original_file_reference)}</td></tr>`).join("") +
+        `</tbody></table>` : '<span class="muted">empty</span>');
+    } else if (tab === "vectors") {
+      const d = await api(`/tenants/${tenantId}/inspect/vectors?limit=50`);
+      panel.innerHTML = `<div class="muted" style="margin-bottom:8px">ChromaDB · collection <code class="k">${esc(d.collection)}</code> · ${d.count} chunk(s)</div>` + (d.items.length ?
+        `<table><thead><tr><th>chunk text</th><th>section</th><th>source</th></tr></thead><tbody>` +
+        d.items.map(r => `<tr><td>${esc(r.document).slice(0,140)}…</td><td><code class="k">${esc(r.metadata.section_type)}</code></td><td class="ref">${esc(r.metadata.original_file_reference)} #${esc(r.metadata.chunk_index)}</td></tr>`).join("") +
+        `</tbody></table>` : '<span class="muted">empty</span>');
+    } else if (tab === "graph") {
+      const d = await api(`/tenants/${tenantId}/inspect/graph?limit=100`);
+      panel.innerHTML = `<div class="muted" style="margin-bottom:8px">Neo4j · ${d.entities.length} entit(ies), ${d.relationships.length} relationship(s)</div>` +
+        `<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:14px">` +
+        `<div><b style="font-size:12px">Entities</b>${d.entities.length ? d.entities.map(e => `<div class="hit"><code class="k">${esc(e.type)}</code> ${esc(e.name)}</div>`).join("") : '<div class="muted">none</div>'}</div>` +
+        `<div><b style="font-size:12px">Relationships</b>${d.relationships.length ? d.relationships.map(r => `<div class="hit triple">(${esc(r.subject)}) <span class="rel">-[${esc(r.relationship)}]→</span> (${esc(r.object)})</div>`).join("") : '<div class="muted">none</div>'}</div>` +
+        `</div>`;
+    } else if (tab === "runs") {
+      const d = await api(`/tenants/${tenantId}/inspect/runs?limit=10`);
+      panel.innerHTML = d.runs.length ? d.runs.map(run =>
+        `<div class="hit"><b>run ${run.run_id}</b> <span class="pill ${run.status}">${run.status}</span> · ${run.record_count} record(s)
+          <div style="margin-top:4px">${run.stages.map(s => `<span class="pill ${s.status}" title="${esc(s.detail||'')}">${esc(s.stage)}: ${s.item_count}</span>`).join(" ")}</div></div>`).join("") :
+        '<span class="muted">no runs yet — upload something</span>';
+    }
+  } catch (e) { panel.innerHTML = `<div class="out bad">${esc(JSON.stringify(e.detail||e))}</div>`; }
+}
+
+renderTenant();
+if (tenantId) showData("structured");
+</script>
+</body>
+</html>

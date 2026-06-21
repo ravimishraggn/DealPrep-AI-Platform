@@ -110,6 +110,31 @@ class VectorIndexer:
         logger.info("vector-indexed %d chunk(s) across %d tenant(s)", total, len(by_tenant))
         return total
 
+    def peek(self, tenant_id: str, limit: int = 50) -> dict:
+        """Return a sample of what is stored in a tenant's vector collection.
+
+        Args:
+            tenant_id: REQUIRED — the tenant whose collection to inspect.
+            limit: Max stored chunks to return.
+
+        Returns:
+            ``{collection, count, items: [{id, document, metadata}]}`` for display
+            in the "show data" UI.
+        """
+        if not tenant_id:
+            raise ValueError("tenant_id is required")
+        col = self._collection(tenant_id)
+        got = col.get(limit=limit, include=["documents", "metadatas"])
+        ids = got.get("ids") or []
+        docs = got.get("documents") or []
+        metas = got.get("metadatas") or []
+        items = [
+            {"id": ids[i], "document": docs[i] if i < len(docs) else "",
+             "metadata": metas[i] if i < len(metas) else {}}
+            for i in range(len(ids))
+        ]
+        return {"collection": _collection_name(tenant_id), "count": col.count(), "items": items}
+
     def search(self, tenant_id: str, query: str, k: int = 5) -> list[dict]:
         """Semantic search within one tenant's collection.
 
