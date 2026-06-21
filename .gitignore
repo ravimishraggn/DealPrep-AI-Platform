@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Local DB + ingested tenant data (runtime artifacts)
+*.db
+*.sqlite3
+/data/
+/dropzone/
+
+# Server logs (runtime artifacts)
+server.log
+server.err.log
+
+# Env / editors
+.env
+.idea/
+.vscode/

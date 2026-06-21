@@ -5,6 +5,10 @@
 **Owner:** Ravi Mishra
 **Status:** Planning
 
+> **Implementation:** Phases 1–4 (the self-service ingestion platform) are built and runnable.
+> See **[PLATFORM_README.md](PLATFORM_README.md)** to run it locally, plus
+> [ADR 0001](docs/adr/0001-data-ingestion-onboarding-platform.md) for the architecture decisions.
+
 ---
 
 ## 1. Executive Summary
