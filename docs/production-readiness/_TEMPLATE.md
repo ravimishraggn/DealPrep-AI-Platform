@@ -69,3 +69,5 @@
 
 | Action | Effort | Prevents | Tracked by (ADR/PR) |
 |---|---|---|---|
+
+## what major challenges i have solved, need story in layman language

@@ -1,0 +1,45 @@
+# Local platform data layer for Phase 5-6 (ADR 0003 / 0006).
+# Two of the three stores run as containers; ChromaDB runs embedded in-process
+# (a local persistent directory), so it is intentionally NOT a service here.
+#
+#   docker compose up -d
+#
+services:
+  postgres:
+    image: postgres:16
+    container_name: dealprep-postgres
+    environment:
+      POSTGRES_USER: dealprep
+      POSTGRES_PASSWORD: dealprep
+      POSTGRES_DB: dealprep
+    ports:
+      - "5432:5432"
+    volumes:
+      - dealprep_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dealprep -d dealprep"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: dealprep-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/dealprep-graph
+      # Community edition: single database; tenant isolation is property-based (ADR 0006).
+      NEO4J_dbms_security_auth__minimum__password__length: "8"
+    ports:
+      - "7474:7474"   # Browser UI
+      - "7687:7687"   # Bolt driver
+    volumes:
+      - dealprep_neo4j:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  dealprep_pg:
+  dealprep_neo4j:
