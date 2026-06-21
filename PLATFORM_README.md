@@ -5,7 +5,7 @@ submit a **config manifest** (no code) describing their data source. A generic p
 engine handles acquisition for any registered team through a **plugin-based connector
 system**.
 
-This implements **Phases 1–4** of the DealPrep roadmap (see [the PRD](readme.md)).
+This implements **Phases 1–4** of the DealPrep roadmap (see [the PRD](docs/PRD.md)).
 Architecture decisions are recorded in
 [ADR 0001](docs/adr/0001-data-ingestion-onboarding-platform.md). Predicted operational
 reality and known V1 gaps are tracked in the

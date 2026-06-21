@@ -4,7 +4,7 @@
 - **Scope:** Self-service multi-tenant data ingestion: tenant registration, connector plugin
   system, manifest submission + dry-run, secrets indirection, generic APScheduler pipeline
   runner, tenant-namespaced JSON output, status/run-history APIs, minimal browser console.
-- **Roadmap ref:** [PRD](../../readme.md) §12 Phases 1–4
+- **Roadmap ref:** [PRD](../PRD.md) §12 Phases 1–4
 - **Reviews commit/branch:** `feat/ingestion-onboarding-platform` @ `c7e381d`
 - **Implements:** [ADR 0001](../adr/0001-data-ingestion-onboarding-platform.md) · language split context [ADR 0002](../adr/0002-polyglot-language-allocation.md)
 - **Date:** 2026-06-21

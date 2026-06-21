@@ -5,7 +5,7 @@
 
 - **Phase(s):** <e.g. 5–6>
 - **Scope:** <what shipped, one line>
-- **Roadmap ref:** [PRD](../../readme.md) §12 Phase <N>
+- **Roadmap ref:** [PRD](../PRD.md) §12 Phase <N>
 - **Reviews commit/branch:** `<branch>` @ `<short-sha>`
 - **Date:** <YYYY-MM-DD>
 - **Lenses:** Principal Eng · SRE · Product · Security · Customer Success

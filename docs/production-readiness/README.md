@@ -25,8 +25,8 @@ These are deliberately separate from [ADRs](../adr/): ADRs record *decisions*; t
 | Phase(s) | Scope | Review | Verdict |
 |---|---|---|---|
 | 1–4 | Self-service ingestion onboarding platform (V1) | [PHASE-1-4_ingestion-platform.md](PHASE-1-4_ingestion-platform.md) | NO-GO external / GO internal (see doc) |
-| 5–6 | Vector + Hybrid RAG, knowledge graph | _pending — write when delivered_ | — |
+| 5–6 | Extraction → indexing → unified retrieval (Postgres + ChromaDB + Neo4j) | [PHASE-5-6_retrieval-pipeline.md](PHASE-5-6_retrieval-pipeline.md) | GO internal / NO-GO external (see doc) |
 | 7 | Multi-agent orchestration | _pending_ | — |
 | 8 | Dashboard, monitoring, governance | _pending_ | — |
 
-_Phases map to the roadmap in the [PRD](../../readme.md) §12._
+_Phases map to the roadmap in the [PRD](../PRD.md) §12._

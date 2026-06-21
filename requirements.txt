@@ -17,8 +17,10 @@ psycopg[binary]==3.2.3
 pdfplumber==0.11.4          # PDF text + table extraction
 
 # --- Vector store (Phase 5-6) ---
-chromadb==0.5.23            # per-tenant vector collections
-sentence-transformers==3.3.1  # local embeddings (all-MiniLM-L6-v2); pulls torch (large)
+# chromadb 1.x ships prebuilt wheels on Windows/py3.12 (0.5.x pinned a wheel-less
+# chroma-hnswlib that needs a C++ compiler). Embeddings are supplied by us.
+chromadb>=1.5,<2           # per-tenant vector collections
+sentence-transformers==3.3.1  # local embeddings (all-MiniLM-L6-v2); pulls CPU torch
 
 # --- Knowledge graph (Phase 5-6) ---
 neo4j==5.27.0              # graph driver

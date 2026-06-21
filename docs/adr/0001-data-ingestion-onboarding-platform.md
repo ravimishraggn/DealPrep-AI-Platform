@@ -10,7 +10,7 @@
 
 ## 1. Context
 
-The DealPrep PRD (`readme.md`, §9) calls for a self-service ingestion layer: any team
+The DealPrep PRD (`docs/PRD.md`, §9) calls for a self-service ingestion layer: any team
 should onboard a data source by **registering once** and **submitting a config manifest**
 (no code), after which a **generic pipeline engine** acquires the data using a
 **plugin-based connector system**.
