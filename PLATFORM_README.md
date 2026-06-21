@@ -7,7 +7,9 @@ system**.
 
 This implements **Phases 1–4** of the DealPrep roadmap (see [the PRD](readme.md)).
 Architecture decisions are recorded in
-[ADR 0001](docs/adr/0001-data-ingestion-onboarding-platform.md).
+[ADR 0001](docs/adr/0001-data-ingestion-onboarding-platform.md). Predicted operational
+reality and known V1 gaps are tracked in the
+[Phase 1–4 production-readiness review](docs/production-readiness/PHASE-1-4_ingestion-platform.md).
 
 ---
 

@@ -6,8 +6,11 @@
 **Status:** Planning
 
 > **Implementation:** Phases 1–4 (the self-service ingestion platform) are built and runnable.
-> See **[PLATFORM_README.md](PLATFORM_README.md)** to run it locally, plus
-> [ADR 0001](docs/adr/0001-data-ingestion-onboarding-platform.md) for the architecture decisions.
+> See **[PLATFORM_README.md](PLATFORM_README.md)** to run it locally,
+> [ADR 0001](docs/adr/0001-data-ingestion-onboarding-platform.md) for the architecture decisions,
+> and the **[Phase 1–4 production-readiness review](docs/production-readiness/PHASE-1-4_ingestion-platform.md)**
+> for predicted operational reality. Each phase gets its own review — see
+> [docs/production-readiness/](docs/production-readiness/README.md).
 
 ---
 
