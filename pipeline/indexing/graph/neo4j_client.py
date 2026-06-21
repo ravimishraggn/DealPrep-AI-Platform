@@ -51,23 +51,30 @@ class Neo4jClient:
     """Tenant-scoped Neo4j operations. All Cypher lives here and is tenant-filtered."""
 
     def ensure_constraints(self) -> None:
-        """Create the uniqueness constraint backing entity MERGE (idempotent)."""
+        """Create the uniqueness constraint backing entity MERGE (idempotent).
+
+        Identity is (tenant_id, name) — NOT including type — so an entity whose
+        NER label is inconsistent across chunks (e.g. ORG vs PERSON) is still a
+        single node. Without this, name-based relationship MATCHes fan out across
+        duplicate nodes and create duplicate edges.
+        """
         with get_driver().session() as session:
             session.run(
                 "CREATE CONSTRAINT entity_tenant_name IF NOT EXISTS "
-                "FOR (e:Entity) REQUIRE (e.tenant_id, e.name, e.type) IS UNIQUE"
+                "FOR (e:Entity) REQUIRE (e.tenant_id, e.name) IS UNIQUE"
             )
 
     def upsert_entity(
         self, tenant_id: str, name: str, etype: str, source_id: str, file_ref: str
     ) -> None:
-        """MERGE an entity node, tagged with tenant_id + traceability properties."""
+        """MERGE an entity node (identity = tenant_id + name), tagged for trace."""
         _require_tenant(tenant_id)
         with get_driver().session() as session:
             session.run(
                 """
-                MERGE (e:Entity {tenant_id: $tenant_id, name: $name, type: $etype})
-                ON CREATE SET e.source_id = $source_id,
+                MERGE (e:Entity {tenant_id: $tenant_id, name: $name})
+                ON CREATE SET e.type = $etype,
+                              e.source_id = $source_id,
                               e.original_file_reference = $file_ref,
                               e.created_at = timestamp()
                 """,
@@ -131,9 +138,9 @@ class Neo4jClient:
         with get_driver().session() as session:
             result = session.run(
                 """
-                MATCH (e:Entity {tenant_id: $tenant_id})-[r:RELATED {tenant_id: $tenant_id}]-(o:Entity {tenant_id: $tenant_id})
+                MATCH (e:Entity {tenant_id: $tenant_id})-[r:RELATED {tenant_id: $tenant_id}]->(o:Entity {tenant_id: $tenant_id})
                 WHERE toLower(e.name) = toLower($name)
-                RETURN e.name AS subject, r.type AS relationship, o.name AS object,
+                RETURN DISTINCT e.name AS subject, r.type AS relationship, o.name AS object,
                        o.type AS object_type, r.original_file_reference AS file_ref,
                        r.source_id AS source_id
                 LIMIT $limit

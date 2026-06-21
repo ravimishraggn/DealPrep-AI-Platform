@@ -63,10 +63,24 @@ class EntityExtractor:
             etype = _LABEL_MAP.get(ent.label_)
             if etype is None:
                 continue
-            entity = Entity(name=ent.text.strip(), type=etype)
-            key = (entity.norm, entity.type)
-            if not entity.norm or key in seen:
+            name = " ".join(ent.text.split())  # collapse whitespace/newlines
+            if not self._is_clean_name(name):
                 continue
-            seen.add(key)
+            entity = Entity(name=name, type=etype)
+            # De-dupe by normalized name only: a name maps to one entity even if
+            # NER labels it inconsistently across chunks (e.g. ORG vs PERSON).
+            if not entity.norm or entity.norm in seen:
+                continue
+            seen.add(entity.norm)
             out.append(entity)
         return out
+
+    @staticmethod
+    def _is_clean_name(name: str) -> bool:
+        """Reject garbage NER spans (table-cell noise, numbers, fragments).
+
+        PDF page text often renders tables as newline-joined cells; running NER
+        over that yields junk like "11.2 Bluewater" or "Falcon Capital Globex".
+        Require a name that starts with a letter and is a sensible length.
+        """
+        return bool(name) and name[:1].isalpha() and 2 <= len(name) <= 60

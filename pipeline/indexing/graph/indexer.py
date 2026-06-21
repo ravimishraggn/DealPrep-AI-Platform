@@ -45,12 +45,12 @@ class GraphIndexer:
         Returns:
             ``(entities, relationships)`` de-duplicated across the chunk set.
         """
-        all_entities: dict[tuple[str, str], Entity] = {}
+        all_entities: dict[str, Entity] = {}
         all_rels: list[Relationship] = []
         for chunk in chunks:
             ents = self.entities.extract(chunk.text)
             for e in ents:
-                all_entities[(e.norm, e.type)] = e
+                all_entities.setdefault(e.norm, e)  # one node per normalized name
             all_rels.extend(self.relationships.extract(chunk.text, ents))
         # De-dupe relationship triples.
         seen: set[tuple[str, str, str]] = set()
@@ -96,9 +96,18 @@ class GraphIndexer:
             self.client.upsert_entity(tenant_id, name, entity.type, source_id, original_file_reference)
 
         written_rels = 0
+        written_keys: set[tuple[str, str, str]] = set()
         for rel in relationships:
             subj = canonical.get(rel.subject, rel.subject)
             obj = canonical.get(rel.object, rel.object)
+            # Drop self-loops (resolution can collapse "Acme"/"Acme Corp" to one
+            # node) and any duplicate triples produced after canonicalization.
+            if subj == obj:
+                continue
+            key = (subj, rel.relationship, obj)
+            if key in written_keys:
+                continue
+            written_keys.add(key)
             self.client.upsert_relationship(
                 tenant_id, subj, rel.relationship, obj, source_id, original_file_reference
             )

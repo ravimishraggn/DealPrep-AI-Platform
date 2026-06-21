@@ -76,15 +76,17 @@ class StructuredIndexer:
             raise ValueError("tenant_id is required for structured search")
         session = SessionLocal()
         try:
+            # Casts are explicit because psycopg3 cannot infer a bound parameter's
+            # type when it only appears inside plainto_tsquery() / a NULL comparison.
             sql = text(
                 """
                 SELECT id, record_type, source_id, original_file_reference,
                        document_date, fields,
-                       ts_rank(search_tsv, plainto_tsquery('english', :q)) AS rank
+                       ts_rank(search_tsv, plainto_tsquery('english', cast(:q AS text))) AS rank
                 FROM structured_records
-                WHERE tenant_id = :tenant_id
-                  AND (:record_type IS NULL OR record_type = :record_type)
-                  AND search_tsv @@ plainto_tsquery('english', :q)
+                WHERE tenant_id = cast(:tenant_id AS text)
+                  AND (cast(:record_type AS text) IS NULL OR record_type = cast(:record_type AS text))
+                  AND search_tsv @@ plainto_tsquery('english', cast(:q AS text))
                 ORDER BY rank DESC
                 LIMIT :k
                 """

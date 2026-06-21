@@ -58,7 +58,7 @@ def _wait_for_index(client: httpx.Client, tenant_id: str, timeout: int = 120) ->
     deadline = time.time() + timeout
     last = {}
     while time.time() < deadline:
-        r = client.post(f"/tenants/{tenant_id}/search", json={"query": "Acme Corp valuation", "k": 5})
+        r = client.post(f"/tenants/{tenant_id}/search", json={"query": "Acme Corp", "k": 5})
         if r.status_code == 200:
             last = r.json()
             if last["vector"] or last["structured"] or last["graph"]:
@@ -97,7 +97,7 @@ def main() -> int:
             print(f"   [graph] ({g['subject']}) -[{g['relationship']}]-> ({g['object']})")
 
         # Tenant isolation: B has ingested nothing -> all three sets empty.
-        res_b = client.post(f"/tenants/{tenant_b}/search", json={"query": "Acme Corp valuation", "k": 5}).json()
+        res_b = client.post(f"/tenants/{tenant_b}/search", json={"query": "Acme Corp", "k": 5}).json()
         print("\n--- Tenant B search (isolation check) ---")
         print(f"  vector={len(res_b['vector'])} structured={len(res_b['structured'])} graph={len(res_b['graph'])}")
 

@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 _embedder = None
 _embedder_lock = threading.Lock()
 _chroma_client = None
+_chroma_lock = threading.Lock()
 
 
 def get_embedder():
@@ -39,13 +40,20 @@ def get_embedder():
 
 
 def get_chroma_client():
-    """Return a process-wide cached embedded ChromaDB persistent client."""
+    """Return a process-wide cached embedded ChromaDB persistent client.
+
+    Guarded by a lock with double-checked init: the HTTP (search) thread and the
+    scheduler (index) thread can race here, and creating two clients for the same
+    path corrupts ChromaDB's native bindings — so creation must happen exactly once.
+    """
     global _chroma_client
     if _chroma_client is None:
-        import chromadb
+        with _chroma_lock:
+            if _chroma_client is None:
+                import chromadb
 
-        settings.chroma_dir_path.mkdir(parents=True, exist_ok=True)
-        _chroma_client = chromadb.PersistentClient(path=str(settings.chroma_dir_path))
+                settings.chroma_dir_path.mkdir(parents=True, exist_ok=True)
+                _chroma_client = chromadb.PersistentClient(path=str(settings.chroma_dir_path))
     return _chroma_client
 
 
