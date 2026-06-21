@@ -13,7 +13,14 @@
   [0007](../adr/0007-parallel-fanout-indexing.md)
 - **Date:** 2026-06-21
 - **Lenses:** Principal Eng · SRE · Product · Security · Customer Success
-- **Status:** Reviewed
+- **Status:** Reviewed — verified live end-to-end
+
+> **Live verification (all three stores):** registered 2 tenants; ingested a JSON record + a
+> PDF through the auto-chained pipeline; all five stages (`extract`, `process`, `index_vector`,
+> `index_structured`, `index_graph`) logged `success` to `run_stages`; unified search returned
+> vector (2) + structured (2) + graph (3) hits, each traceable to its source file; **tenant B
+> returned 0/0/0 (isolation holds across all three stores).** Three integration bugs surfaced
+> *only* under real stores + the scheduler's threads — see "Lessons" §10 additions below.
 
 > Builds on the [Phase 1–4 review](PHASE-1-4_ingestion-platform.md); issues there (auth,
 > secrets-on-restart, scheduler SPOF, mtime cursor, etc.) still apply. This review focuses on
@@ -160,6 +167,17 @@ only observability, and no reindex/versioning for embeddings or chunking.
   omissions as "the product is wrong."
 - **Stable vector ids vs insert-only SQL rows** is the kind of asymmetry that only shows up on
   the *second* ingestion run, never in a demo.
+
+**Bugs that only appeared with real stores + real threads (from live verification):**
+- **ChromaDB client creation is a race.** A cached client with no creation lock corrupted
+  ChromaDB's native bindings when the HTTP (search) thread and scheduler (index) thread created
+  it concurrently — invisible single-threaded, fatal under the real scheduler. Lock it.
+- **Postgres FTS params need explicit casts.** psycopg3 cannot infer a bound parameter's type
+  inside `plainto_tsquery()` / a NULL comparison; the query 500s only against real Postgres.
+- **Inconsistent NER labels duplicate graph edges.** spaCy labeled "Acme Corp" ORG *and* PERSON
+  in different chunks; with identity = (name, type) that is two nodes, and a name-based
+  relationship MATCH fans out into duplicate edges. Entity identity must be name-based. This is
+  invisible until you look at the actual graph after a real run.
 
 ## 11. Recommended actions feeding the next phase
 
