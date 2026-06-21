@@ -14,6 +14,8 @@ venv/
 # Server logs (runtime artifacts)
 server.log
 server.err.log
+stub.log
+stub.err.log
 
 # Env / editors
 .env
