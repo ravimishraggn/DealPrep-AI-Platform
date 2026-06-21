@@ -21,3 +21,6 @@ stub.err.log
 .env
 .idea/
 .vscode/
+
+# Generated test fixture
+examples/sample_deal.pdf

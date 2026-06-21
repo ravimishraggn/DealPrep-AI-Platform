@@ -64,16 +64,46 @@ class FileUploadConnector(BaseConnector):
             records.append(self._read(file, mtime))
         return records
 
+    # Map file extensions to the connector output contract's format_type.
+    _FORMAT_BY_SUFFIX = {
+        ".json": "json",
+        ".csv": "csv",
+        ".pdf": "pdf",
+        ".html": "html",
+        ".htm": "html",
+        ".txt": "text",
+        ".md": "text",
+    }
+
     def _read(self, file: Path, mtime: datetime) -> dict[str, Any]:
-        meta: dict[str, Any] = {
-            "filename": file.name,
-            "path": str(file),
-            "size_bytes": file.stat().st_size,
-            "modified_at": mtime.isoformat(),
+        """Build the connector output contract (RawRecord shape) for one file.
+
+        Detects ``format_type`` from the file extension. Text-like formats are read
+        inline into ``content``; binary formats (PDF) instead carry a ``file_path``
+        so the extractor reads the bytes itself. ``original_file_reference`` is the
+        filename and ``document_date`` is the file mtime.
+        """
+        fmt = self._FORMAT_BY_SUFFIX.get(file.suffix.lower(), "text")
+        envelope: dict[str, Any] = {
+            "format_type": fmt,
+            "content": None,
+            "file_path": str(file),
+            "original_file_reference": file.name,
+            "document_date": mtime.isoformat(),
+            "metadata": {
+                "connector": "file_upload",
+                "size_bytes": file.stat().st_size,
+            },
         }
-        if self.config.parse_json and file.suffix.lower() == ".json":
+        # Inline text-like content; leave binary (pdf) to be read by its extractor.
+        if fmt == "json":
             try:
-                meta["content"] = json.loads(file.read_text(encoding="utf-8"))
+                envelope["content"] = json.loads(file.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError) as exc:
-                meta["parse_error"] = str(exc)
-        return meta
+                envelope["metadata"]["parse_error"] = str(exc)
+        elif fmt in {"csv", "text", "html"}:
+            try:
+                envelope["content"] = file.read_text(encoding="utf-8")
+            except OSError as exc:
+                envelope["metadata"]["parse_error"] = str(exc)
+        return envelope

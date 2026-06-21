@@ -119,7 +119,25 @@ class RestApiConnector(BaseConnector):
                 if len(records) < cfg.page_size:
                     break  # last (partial) page
                 page += 1
-        return self._filter_since(collected, since_timestamp)
+        filtered = self._filter_since(collected, since_timestamp)
+        return [self._to_envelope(rec, i) for i, rec in enumerate(filtered)]
+
+    def _to_envelope(self, record: dict[str, Any], index: int) -> dict[str, Any]:
+        """Wrap a fetched JSON record in the connector output contract.
+
+        Tags the record with ``format_type='json'`` and a traceable
+        ``original_file_reference`` (base_url + ordinal), and surfaces the
+        configured ``timestamp_field`` as the document date.
+        """
+        field = self.config.timestamp_field
+        doc_date = str(record.get(field)) if field and isinstance(record, dict) and record.get(field) else None
+        return {
+            "format_type": "json",
+            "content": record,
+            "original_file_reference": f"{self.config.base_url}#{index}",
+            "document_date": doc_date,
+            "metadata": {"connector": "rest_api"},
+        }
 
     def _filter_since(
         self, records: list[dict[str, Any]], since: datetime | None
