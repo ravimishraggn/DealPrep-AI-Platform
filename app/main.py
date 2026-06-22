@@ -16,6 +16,7 @@ from app.db import init_db
 from app.registry import discover
 from app.routers import inspect, search, secrets, sources, tenants
 from app.runner import shutdown_runner, start_runner
+from pipeline.chunking.base import discover_chunkers
 from pipeline.extractors.registry import discover_extractors
 from pipeline.indexing.graph.neo4j_client import close_driver
 
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
     init_db()
     discover()  # import connectors/ so plugins self-register (ADR 0001 D2)
     discover_extractors()  # import extractors/ so they self-register (ADR 0004)
+    discover_chunkers()  # register chunking strategies (ADR 0009)
     start_runner()  # APScheduler picks up active manifests (ADR 0001 D6)
     yield
     shutdown_runner()
