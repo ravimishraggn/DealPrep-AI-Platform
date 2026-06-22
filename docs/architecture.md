@@ -82,6 +82,7 @@ that reads across tenants.
 | [0010](adr/0010-embedding-backend-selection.md) | Embedding backend registry + selection guide | `pipeline/embedding/` |
 | [0011](adr/0011-vector-store-selection.md) | Vector store registry + selection guide | `pipeline/vectorstore/` |
 | [0012](adr/0012-per-tenant-pipeline-profile.md) | Per-tenant pipeline profile (defaults + override) | `app/profiles.py`, `app/routers/profiles.py` |
+| [0013](adr/0013-multi-agent-orchestration.md) | Multi-agent orchestration (fan-out/fan-in + synthesis) | `agents/`, `app/routers/analyze.py` |
 
 **Pluggable-strategy seam:** chunking, embedding, and vector store are each a name-keyed
 registry (like connectors/extractors). A tenant's choices live in a validated
@@ -95,6 +96,21 @@ Every artifact carries `tenant_id`, `source_id`, and `original_file_reference` e
 chunks (vector metadata), structured rows (columns), and graph nodes/edges (properties). A
 search result can therefore always be traced back to the exact source document — a hard
 requirement for the regulated-finance use case in the [PRD](PRD.md).
+
+## Pipeline stage evaluation
+
+Before any pluggable backend is marked `implemented = True`, it must pass the formal
+evaluation defined in [`docs/evaluation/`](evaluation/README.md).
+Each runbook covers correctness, quality metrics, performance benchmarks, isolation, and
+failure modes for that stage. Eval results are recorded in a dated log appended to each
+runbook.
+
+| Stage | Evaluation runbook |
+|---|---|
+| Extractor | [extractor-evaluation.md](evaluation/extractor-evaluation.md) |
+| Chunking | [chunking-evaluation.md](evaluation/chunking-evaluation.md) |
+| Embedding | [embedding-evaluation.md](evaluation/embedding-evaluation.md) |
+| Vector store | [vectorstore-evaluation.md](evaluation/vectorstore-evaluation.md) |
 
 ## Per-run observability
 

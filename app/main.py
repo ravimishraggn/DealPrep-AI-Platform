@@ -12,9 +12,10 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from agents.registry import discover_agents
 from app.db import init_db
 from app.registry import discover
-from app.routers import capabilities, inspect, profiles, search, secrets, sources, tenants
+from app.routers import analyze, capabilities, inspect, profiles, search, secrets, sources, tenants
 from app.runner import shutdown_runner, start_runner
 from pipeline.chunking.base import discover_chunkers
 from pipeline.embedding.base import discover_embedders
@@ -26,12 +27,13 @@ from pipeline.vectorstore.base import discover_vector_stores
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    discover()  # import connectors/ so plugins self-register (ADR 0001 D2)
-    discover_extractors()  # import extractors/ so they self-register (ADR 0004)
-    discover_chunkers()  # register chunking strategies (ADR 0009)
-    discover_embedders()  # register embedding backends (ADR 0010)
-    discover_vector_stores()  # register vector store backends (ADR 0011)
-    start_runner()  # APScheduler picks up active manifests (ADR 0001 D6)
+    discover()           # connectors/ self-register (ADR 0001 D2)
+    discover_extractors()  # extractors/ self-register (ADR 0004)
+    discover_chunkers()    # chunking strategies (ADR 0009)
+    discover_embedders()   # embedding backends (ADR 0010)
+    discover_vector_stores()  # vector store backends (ADR 0011)
+    discover_agents()      # agent layer self-registers (ADR 0013)
+    start_runner()         # APScheduler picks up active manifests (ADR 0001 D6)
     yield
     shutdown_runner()
     close_driver()  # release the Neo4j driver if it was opened
@@ -48,6 +50,7 @@ app.include_router(tenants.router)
 app.include_router(sources.router)
 app.include_router(secrets.router)
 app.include_router(search.router)
+app.include_router(analyze.router)
 app.include_router(inspect.router)
 app.include_router(capabilities.router)
 app.include_router(profiles.router)

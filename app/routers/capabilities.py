@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from agents.registry import AGENT_REGISTRY
 from app.config import settings
 from pipeline.chunking.base import CHUNKER_REGISTRY
 from pipeline.embedding.base import EMBEDDER_REGISTRY
@@ -43,9 +44,14 @@ def capabilities() -> dict:
             {"name": n, "implemented": cls.implemented}
             for n, cls in sorted(VECTOR_STORE_REGISTRY.items())
         ],
+        "agents": [
+            {"name": n, "implemented": getattr(cls, "implemented", True)}
+            for n, cls in sorted(AGENT_REGISTRY.items())
+        ],
         "defaults": {
             "chunking": settings.default_chunking,
             "embedding": settings.default_embedding,
             "vector_store": settings.default_vector_store,
+            "orchestrator": "sequential",
         },
     }

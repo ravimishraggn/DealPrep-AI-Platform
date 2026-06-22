@@ -6,7 +6,7 @@ indexes that data into **three stores** — a vector store (ChromaDB), a relatio
 store (Postgres), and a knowledge graph (Neo4j) — then exposes it through one **unified
 search API**. Every record is traceable to its source, and every store is isolated per tenant.
 
-This repo covers Phases 1–6 of the [product vision](docs/PRD.md). Architecture decisions are
+This repo covers Phases 1–7 of the [product vision](docs/PRD.md). Architecture decisions are
 in [docs/adr/](docs/adr/); the detailed system diagram is in [docs/architecture.md](docs/architecture.md).
 
 ---
@@ -212,3 +212,7 @@ examples/       sample PDF generator, REST stub, end-to-end test
 
 See [docs/production-readiness/](docs/production-readiness/README.md) for the per-phase
 "what breaks in production" reviews.
+
+See [docs/evaluation/](docs/evaluation/README.md) for the per-stage evaluation runbooks
+(correctness, quality metrics, performance benchmarks, isolation, and backend gate checklists)
+that a new backend must pass before `implemented = True`.

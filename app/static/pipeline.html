@@ -8,7 +8,7 @@
   :root {
     --bg:#0f1419; --panel:#1a2230; --panel2:#141b27; --line:#2a3441;
     --text:#e6edf3; --muted:#8b98a9; --accent:#4f9cf9; --ok:#3fb950; --bad:#f85149;
-    --pg:#5b9bd5; --chroma:#c08cf0; --neo:#4fc3a1; --chip:#243044;
+    --pg:#5b9bd5; --chroma:#c08cf0; --neo:#4fc3a1; --chip:#243044; --warn:#e3a000;
   }
   * { box-sizing:border-box; }
   body { margin:0; font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
@@ -109,6 +109,14 @@
       <button onclick="runSearch()">Search all three</button>
       <div id="searchOut"></div>
     </div>
+
+    <div class="card">
+      <h2>4 · Analyze <span class="muted" style="text-transform:none;font-size:11px">— multi-agent synthesis</span></h2>
+      <div class="muted" style="font-size:12px;margin-bottom:8px">Runs three retrieval agents in parallel → RiskScorer → SynthesisAgent. Returns a narrative answer with citations and a discrepancy risk score.</div>
+      <input id="aq" placeholder="e.g. Why is Acme Corp trading at a premium?" onkeydown="if(event.key==='Enter')runAnalyze()" />
+      <button onclick="runAnalyze()">Analyze</button>
+      <div id="analyzeStatus"></div>
+    </div>
   </div>
 
   <!-- RIGHT: results + data -->
@@ -120,6 +128,11 @@
         <div class="engine"><h3><span class="dot" style="background:var(--pg)"></span>Structured (Postgres)</h3><div id="r_structured"><span class="muted">—</span></div></div>
         <div class="engine"><h3><span class="dot" style="background:var(--neo)"></span>Graph (Neo4j)</h3><div id="r_graph"><span class="muted">—</span></div></div>
       </div>
+    </div>
+
+    <div class="card" id="analyzeCard" style="display:none">
+      <h2>Analysis result <span class="muted" style="text-transform:none;font-size:11px">— agent synthesis</span></h2>
+      <div id="analyzeResult"><span class="muted">—</span></div>
     </div>
 
     <div class="card">
@@ -280,6 +293,66 @@ async function saveProfile() {
 
 const _origRenderTenant = renderTenant;
 renderTenant = function(){ _origRenderTenant(); if (tenantId) loadProfileUI(); };
+
+async function runAnalyze() {
+  if (!tenantId) return alert("Register or select a tenant first.");
+  const q = document.getElementById("aq").value.trim() || "Why is Acme Corp trading at a premium?";
+  const statusEl = document.getElementById("analyzeStatus");
+  setOut(statusEl, "running agents…", true);
+  const card = document.getElementById("analyzeCard");
+  card.style.display = "";
+  document.getElementById("analyzeResult").innerHTML = '<span class="muted">analyzing…</span>';
+  try {
+    const r = await api(`/tenants/${tenantId}/analyze`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ query: q, k: 5 })
+    });
+    statusEl.textContent = "";
+
+    const rs = r.risk_score;
+    const rColor = rs == null ? "var(--muted)" : rs < 0.3 ? "var(--ok)" : rs < 0.6 ? "var(--warn)" : "var(--bad)";
+    const rLabel = rs == null ? "n/a" : rs < 0.3 ? "low" : rs < 0.6 ? "medium" : "HIGH";
+
+    let html = "";
+
+    if (rs != null) {
+      html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:9px 12px;background:var(--panel2);border-radius:7px;border:1px solid var(--line)">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Discrepancy Risk</span>
+        <span style="font-size:22px;font-weight:700;color:${rColor}">${rs.toFixed(2)}</span>
+        <span style="padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(0,0,0,.3);color:${rColor}">${rLabel}</span>
+      </div>`;
+    }
+
+    html += `<div style="line-height:1.75;white-space:pre-wrap;font-size:13px;margin-bottom:14px;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:7px">${esc(r.answer || "(no answer — ingest documents first)")}</div>`;
+
+    if (r.warnings && r.warnings.length)
+      html += `<div class="out bad" style="margin-bottom:10px">${r.warnings.map(esc).join("\n")}</div>`;
+
+    html += `<details style="margin-bottom:8px"><summary style="cursor:pointer;font-size:12px;color:var(--muted)">Agent timing (${Object.keys(r.agent_results||{}).length} agents)</summary>
+      <table style="margin-top:8px"><thead><tr><th>Agent</th><th>Status</th><th>ms</th><th>Error</th></tr></thead><tbody>` +
+      Object.entries(r.agent_results || {}).map(([name, a]) =>
+        `<tr><td>${esc(name)}</td><td><span class="pill ${a.status}">${esc(a.status)}</span></td><td>${a.latency_ms}</td><td class="muted" style="font-size:11px">${esc(a.error||"")}</td></tr>`
+      ).join("") + `</tbody></table></details>`;
+
+    if (r.citations && r.citations.length) {
+      html += `<details><summary style="cursor:pointer;font-size:12px;color:var(--muted)">${r.citations.length} citation(s)</summary>` +
+        r.citations.map(c => {
+          if (c.agent === "document_researcher")
+            return `<div class="hit"><code class="k">doc</code> <span class="ref">${esc(c.file||"")}</span>  <span class="score">${c.score != null ? c.score.toFixed ? c.score.toFixed(2) : c.score : ""}</span><br>${esc((c.text||"").slice(0,220))}</div>`;
+          if (c.agent === "structured_agent")
+            return `<div class="hit"><code class="k">structured</code> ${esc(JSON.stringify(c.fields)).slice(0,200)}</div>`;
+          if (c.agent === "graph_agent")
+            return `<div class="hit triple"><code class="k">graph</code> (${esc(c.subject)}) <span class="rel">-[${esc(c.relationship)}]→</span> (${esc(c.object)})</div>`;
+          return `<div class="hit">${esc(JSON.stringify(c))}</div>`;
+        }).join("") + `</details>`;
+    }
+
+    document.getElementById("analyzeResult").innerHTML = html;
+  } catch(e) {
+    setOut(statusEl, e.detail || JSON.stringify(e), false);
+    document.getElementById("analyzeCard").style.display = "none";
+  }
+}
 
 renderTenant();
 if (tenantId) showData("structured");
