@@ -61,8 +61,7 @@ def inspect_structured(
 def inspect_vectors(tenant_id: str, limit: int = 50, db: Session = Depends(get_session)) -> dict[str, Any]:
     """Return a sample of the tenant's vector-store chunks (ChromaDB)."""
     _require_tenant(tenant_id, db)
-    data = VectorIndexer().peek(tenant_id, limit)
-    return {"store": "chromadb", **data}
+    return VectorIndexer().peek(tenant_id, limit)
 
 
 @router.get("/inspect/graph", summary="Neo4j: stored entities + relationships")

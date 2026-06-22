@@ -32,7 +32,13 @@ class Settings(BaseSettings):
     # --- ChromaDB: vector store, one collection per tenant (ADR 0005) ---
     # Embedded persistent client writes to this directory; no separate server.
     chroma_dir: Path = BASE_DIR / "data" / "chroma"
-    embedding_model: str = "all-MiniLM-L6-v2"  # sentence-transformers, local, 384-dim
+    embedding_model: str = "all-MiniLM-L6-v2"  # sentence-transformers model for the 'minilm' backend
+
+    # --- Pipeline strategy defaults (ADR 0009/0010/0011/0012) ---
+    # Platform-wide defaults; a tenant may override via its pipeline profile.
+    default_chunking: str = "section_aware"
+    default_embedding: str = "minilm"
+    default_vector_store: str = "chroma"
 
     # --- Neo4j: entity/relationship graph, property-based tenant tagging (ADR 0006) ---
     neo4j_uri: str = "bolt://localhost:7687"

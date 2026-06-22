@@ -216,7 +216,7 @@ async function showData(tab) {
         `</tbody></table>` : '<span class="muted">empty</span>');
     } else if (tab === "vectors") {
       const d = await api(`/tenants/${tenantId}/inspect/vectors?limit=50`);
-      panel.innerHTML = `<div class="muted" style="margin-bottom:8px">ChromaDB · collection <code class="k">${esc(d.collection)}</code> · ${d.count} chunk(s)</div>` + (d.items.length ?
+      panel.innerHTML = `<div class="muted" style="margin-bottom:8px">Vectors · ${esc(d.embedder||'')} → ${esc(d.store||'')} · namespace <code class="k">${esc(d.namespace)}</code> · ${d.count} chunk(s)</div>` + (d.items.length ?
         `<table><thead><tr><th>chunk text</th><th>section</th><th>source</th></tr></thead><tbody>` +
         d.items.map(r => `<tr><td>${esc(r.document).slice(0,140)}…</td><td><code class="k">${esc(r.metadata.section_type)}</code></td><td class="ref">${esc(r.metadata.original_file_reference)} #${esc(r.metadata.chunk_index)}</td></tr>`).join("") +
         `</tbody></table>` : '<span class="muted">empty</span>');
