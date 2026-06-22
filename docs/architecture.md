@@ -77,6 +77,17 @@ that reads across tenants.
 | [0005](adr/0005-chromadb-vector-store.md) | ChromaDB, per-tenant collection, local embeddings | `pipeline/indexing/vector.py` |
 | [0006](adr/0006-neo4j-property-based-tenant-tagging.md) | Neo4j property-based tenant tagging (Community) | `pipeline/indexing/graph/` |
 | [0007](adr/0007-parallel-fanout-indexing.md) | Parallel fan-out indexing + per-stage logging | `pipeline/orchestrator.py`, `app/runner.py` |
+| [0008](adr/0008-extractor-selection-and-stub-pattern.md) | Extractor selection + working-vs-stub pattern | `pipeline/extractors/` |
+| [0009](adr/0009-chunking-strategy-selection.md) | Chunking strategy registry + selection guide | `pipeline/chunking/` |
+| [0010](adr/0010-embedding-backend-selection.md) | Embedding backend registry + selection guide | `pipeline/embedding/` |
+| [0011](adr/0011-vector-store-selection.md) | Vector store registry + selection guide | `pipeline/vectorstore/` |
+| [0012](adr/0012-per-tenant-pipeline-profile.md) | Per-tenant pipeline profile (defaults + override) | `app/profiles.py`, `app/routers/profiles.py` |
+
+**Pluggable-strategy seam:** chunking, embedding, and vector store are each a name-keyed
+registry (like connectors/extractors). A tenant's choices live in a validated
+`TenantPipelineProfile`, resolved identically at index time (`runner` → `orchestrator`) and
+query time (`search`/`inspect`) so vectors are always written and read with the same backend.
+`GET /capabilities` advertises the menu (real vs stub).
 
 ## Traceability
 

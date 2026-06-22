@@ -50,6 +50,27 @@ tables become structured rows.
 
 ---
 
+## Pluggable strategies (a team chooses its own pipeline)
+
+Every stage is a **registry of swappable backends** — a working local default plus POC stubs —
+selected per tenant via a **pipeline profile**. `GET /capabilities` lists what's available
+(real vs stub); `PUT /tenants/{id}/profile` sets a team's choices (stubs are rejected).
+
+| Stage | Backends (✅ real / 🟡 stub) | Default | Choose via | Decision guide |
+|---|---|---|---|---|
+| Extractor (by `format_type`) | ✅ json, csv, text, html, pdf · 🟡 docx, xlsx, pptx | format-driven | the data's format | [ADR 0008](docs/adr/0008-extractor-selection-and-stub-pattern.md) |
+| Chunking | ✅ section_aware, sentence_window, fixed_size · 🟡 semantic | section_aware | profile | [ADR 0009](docs/adr/0009-chunking-strategy-selection.md) |
+| Embedding | ✅ minilm, hashing · 🟡 openai, bedrock | minilm | profile | [ADR 0010](docs/adr/0010-embedding-backend-selection.md) |
+| Vector store | ✅ chroma, memory · 🟡 pgvector, qdrant | chroma | profile | [ADR 0011](docs/adr/0011-vector-store-selection.md) |
+
+Each ADR is a **decision framework** — who owns the choice, when to revisit, and a selection
+rule-of-thumb. The profile mechanism + governance is [ADR 0012](docs/adr/0012-per-tenant-pipeline-profile.md).
+The `hashing` + `memory` + `fixed_size` combination runs the whole vector path with **zero
+external dependencies** (no torch, no ChromaDB) — ideal for CI/POC.
+
+> Adding a backend is one file + one decorator (`@register_chunker` / `@register_embedder` /
+> `@register_vector_store`), exactly like connectors and extractors — no core change.
+
 ## Run it locally
 
 **Prerequisites:** Python 3.11+, Docker Desktop.
