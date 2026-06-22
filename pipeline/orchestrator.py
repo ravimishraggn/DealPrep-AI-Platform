@@ -66,18 +66,29 @@ class PipelineOrchestrator:
         self.structured = structured or StructuredIndexer()
         self.graph = graph or GraphIndexer()
 
-    def run(self, records: list[dict[str, Any]], tenant_id: str, source_id: str) -> PipelineOutcome:
+    def run(
+        self, records: list[dict[str, Any]], tenant_id: str, source_id: str, profile=None
+    ) -> PipelineOutcome:
         """Process a batch of connector records through the whole pipeline.
 
         Args:
             records: Raw connector output dicts (RawRecord shape, format-tagged).
             tenant_id: Owning tenant (threaded through every stage for isolation).
             source_id: Originating source (traceability).
+            profile: Optional ``PipelineProfile`` selecting this tenant's chunking
+                and vector backend; ``None`` uses the platform defaults.
 
         Returns:
             A ``PipelineOutcome`` with per-stage results and aggregate counts.
         """
         outcome = PipelineOutcome()
+
+        # Resolve profile-dependent stages (chunking + vector backend). Structured
+        # and graph indexing are not profile-selectable (fixed Postgres + Neo4j).
+        processor = DocumentProcessor(profile.chunking) if profile else self.processor
+        vector = (
+            VectorIndexer(profile.embedding, profile.vector_store) if profile else self.vector
+        )
 
         # Stage 1: format-route + extract.
         raw_records = self._coerce(records)
@@ -90,7 +101,7 @@ class PipelineOrchestrator:
         )
 
         # Stage 2: document processing (chunk text / pass structured through).
-        chunks, structured_records = self.processor.process(extraction, tenant_id, source_id)
+        chunks, structured_records = processor.process(extraction, tenant_id, source_id)
         outcome.chunks = len(chunks)
         outcome.structured = len(structured_records)
         outcome.stages.append(
@@ -99,7 +110,7 @@ class PipelineOrchestrator:
 
         # Stage 3: parallel fan-out into the three independent indexers.
         tasks = {
-            "index_vector": lambda: self._index_vector(chunks),
+            "index_vector": lambda: vector.embed_and_index(chunks),
             "index_structured": lambda: self._index_structured(structured_records, tenant_id, source_id),
             "index_graph": lambda: self._index_graph(chunks, tenant_id, source_id),
         }
@@ -120,10 +131,6 @@ class PipelineOrchestrator:
             except Exception:  # noqa: BLE001 - a malformed record is skipped, not fatal
                 logger.warning("skipping malformed record: %s", str(rec)[:120])
         return out
-
-    def _index_vector(self, chunks) -> int:
-        """Vector-index chunks; returns count indexed."""
-        return self.vector.embed_and_index(chunks)
 
     def _index_structured(self, records, tenant_id, source_id) -> int:
         """Structured-index records; returns count indexed."""

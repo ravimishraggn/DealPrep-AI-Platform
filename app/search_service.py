@@ -22,13 +22,13 @@ class UnifiedSearch:
     """Fan-out search over ChromaDB, Postgres, and Neo4j for one tenant."""
 
     def __init__(self) -> None:
-        """Construct the three engine clients (models load lazily on first use)."""
-        self.vector = VectorIndexer()
+        """Construct the profile-independent engine clients."""
         self.structured = StructuredIndexer()
         self.graph = Neo4jClient()
 
     def search(
-        self, tenant_id: str, query: str, k: int = 5, record_type: str | None = None
+        self, tenant_id: str, query: str, k: int = 5, record_type: str | None = None,
+        embedding: str | None = None, vector_store: str | None = None,
     ) -> dict:
         """Run vector + structured + graph search in parallel for one tenant.
 
@@ -37,6 +37,9 @@ class UnifiedSearch:
             query: The natural-language / keyword query.
             k: Max results per engine.
             record_type: Optional structured-record type filter.
+            embedding: Embedder backend to query with — MUST match what the tenant
+                indexed with (from its profile); ``None`` uses the platform default.
+            vector_store: Vector store backend to query — likewise from the profile.
 
         Returns:
             A dict with separately labeled ``vector``, ``structured``, and
@@ -45,10 +48,12 @@ class UnifiedSearch:
         if not tenant_id:
             raise ValueError("tenant_id is required for search")
 
+        # Vector search must use the SAME embedder + store the tenant indexed with.
+        vector = VectorIndexer(embedding, vector_store)
         warnings: list[str] = []
 
         def _vector():
-            return self.vector.search(tenant_id, query, k)
+            return vector.search(tenant_id, query, k)
 
         def _structured():
             return self.structured.search(tenant_id, query, k, record_type)

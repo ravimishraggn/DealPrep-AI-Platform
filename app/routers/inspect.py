@@ -18,6 +18,7 @@ from app.config import settings
 from app.db import get_session
 from app.identifiers import new_id
 from app.models import RunHistory, RunStage, Source, StructuredRecordRow, Tenant
+from app.profiles import resolve_profile
 from pipeline.indexing.graph.neo4j_client import Neo4jClient
 from pipeline.indexing.vector import VectorIndexer
 
@@ -61,7 +62,8 @@ def inspect_structured(
 def inspect_vectors(tenant_id: str, limit: int = 50, db: Session = Depends(get_session)) -> dict[str, Any]:
     """Return a sample of the tenant's vector-store chunks (ChromaDB)."""
     _require_tenant(tenant_id, db)
-    return VectorIndexer().peek(tenant_id, limit)
+    profile = resolve_profile(tenant_id, db)
+    return VectorIndexer(profile.embedding, profile.vector_store).peek(tenant_id, limit)
 
 
 @router.get("/inspect/graph", summary="Neo4j: stored entities + relationships")

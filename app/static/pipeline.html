@@ -83,6 +83,16 @@
     </div>
 
     <div class="card">
+      <h2>1b · Pipeline profile <span class="muted" style="text-transform:none">— this team's strategies</span></h2>
+      <div class="muted" style="font-size:12px">Choose how this tenant chunks, embeds, and stores vectors. Stubs are disabled. Applies to future ingestion (changing = reindex).</div>
+      <label>Chunking</label><select id="p_chunking"></select>
+      <label>Embedding</label><select id="p_embedding"></select>
+      <label>Vector store</label><select id="p_vector"></select>
+      <div class="row"><button onclick="saveProfile()">Save profile</button><span id="p_state" class="muted" style="font-size:12px"></span></div>
+      <div id="profileOut"></div>
+    </div>
+
+    <div class="card">
       <h2>2 · Ingest</h2>
       <div class="muted" style="font-size:12px">Upload JSON / PDF / CSV / TXT — the pipeline extracts, chunks, and indexes into all three stores automatically.</div>
       <input type="file" id="files" multiple style="margin-top:10px" />
@@ -236,6 +246,40 @@ async function showData(tab) {
     }
   } catch (e) { panel.innerHTML = `<div class="out bad">${esc(JSON.stringify(e.detail||e))}</div>`; }
 }
+
+let capsLoaded = false;
+async function loadCapabilities() {
+  if (capsLoaded) return;
+  const c = await api("/capabilities");
+  const fill = (sel, list) => { document.getElementById(sel).innerHTML = list.map(o =>
+    `<option value="${o.name}" ${o.implemented?'':'disabled'}>${o.name}${o.implemented?'':' (stub)'}</option>`).join(""); };
+  fill("p_chunking", c.chunking); fill("p_embedding", c.embedding); fill("p_vector", c.vector_stores);
+  capsLoaded = true;
+}
+async function loadProfileUI() {
+  if (!tenantId) return;
+  try {
+    await loadCapabilities();
+    const p = await api(`/tenants/${tenantId}/profile`);
+    document.getElementById("p_chunking").value = p.chunking;
+    document.getElementById("p_embedding").value = p.embedding;
+    document.getElementById("p_vector").value = p.vector_store;
+    document.getElementById("p_state").textContent = p.is_default ? "(platform defaults)" : "(custom)";
+  } catch (e) { /* tenant may not exist yet */ }
+}
+async function saveProfile() {
+  if (!tenantId) return alert("Register or select a tenant first.");
+  try {
+    const r = await api(`/tenants/${tenantId}/profile`, { method:"PUT", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ chunking: document.getElementById("p_chunking").value,
+        embedding: document.getElementById("p_embedding").value, vector_store: document.getElementById("p_vector").value }) });
+    setOut(document.getElementById("profileOut"), `Saved ✓ ${r.chunking} · ${r.embedding} · ${r.vector_store}`, true);
+    document.getElementById("p_state").textContent = "(custom)";
+  } catch (e) { setOut(document.getElementById("profileOut"), e.detail || e, false); }
+}
+
+const _origRenderTenant = renderTenant;
+renderTenant = function(){ _origRenderTenant(); if (tenantId) loadProfileUI(); };
 
 renderTenant();
 if (tenantId) showData("structured");

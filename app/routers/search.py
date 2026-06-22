@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_session
 from app.models import Tenant
+from app.profiles import resolve_profile
 from app.search_service import get_search
 
 router = APIRouter(prefix="/tenants/{tenant_id}", tags=["search"])
@@ -91,7 +92,12 @@ def unified_search(
     if db.get(Tenant, tenant_id) is None:
         raise HTTPException(status_code=404, detail=f"Tenant '{tenant_id}' not found")
 
-    results = get_search().search(tenant_id, payload.query, payload.k, payload.record_type)
+    # Query the vector store with the tenant's chosen embedder+store (must match index time).
+    profile = resolve_profile(tenant_id, db)
+    results = get_search().search(
+        tenant_id, payload.query, payload.k, payload.record_type,
+        embedding=profile.embedding, vector_store=profile.vector_store,
+    )
     return SearchResponse(
         tenant_id=tenant_id,
         query=payload.query,

@@ -55,10 +55,12 @@ def _run_pipeline(session, run_id: int, source, records) -> None:
     landed successfully).
     """
     from app.models import StageStatus
+    from app.profiles import resolve_profile
     from pipeline.orchestrator import get_orchestrator
 
     try:
-        outcome = get_orchestrator().run(records, source.tenant_id, source.id)
+        profile = resolve_profile(source.tenant_id, session)  # tenant's chosen strategies
+        outcome = get_orchestrator().run(records, source.tenant_id, source.id, profile)
         stages = outcome.stages
     except Exception as exc:  # noqa: BLE001 - pipeline error must not fail ingestion
         logger.exception("pipeline failed for source %s", source.id)

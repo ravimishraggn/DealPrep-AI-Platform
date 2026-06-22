@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.db import init_db
 from app.registry import discover
-from app.routers import capabilities, inspect, search, secrets, sources, tenants
+from app.routers import capabilities, inspect, profiles, search, secrets, sources, tenants
 from app.runner import shutdown_runner, start_runner
 from pipeline.chunking.base import discover_chunkers
 from pipeline.embedding.base import discover_embedders
@@ -50,6 +50,7 @@ app.include_router(secrets.router)
 app.include_router(search.router)
 app.include_router(inspect.router)
 app.include_router(capabilities.router)
+app.include_router(profiles.router)
 
 
 @app.get("/health", tags=["meta"])

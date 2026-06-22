@@ -139,6 +139,23 @@ class RunStage(Base):
     run: Mapped["RunHistory"] = relationship(back_populates="stages")
 
 
+class TenantPipelineProfile(Base):
+    """A tenant's chosen pipeline strategies (ADR 0012).
+
+    Overrides the platform defaults for chunking / embedding / vector store. Absent
+    row = the tenant uses platform defaults. Selections are validated against the
+    registries (must be registered and implemented) before being stored.
+    """
+
+    __tablename__ = "tenant_pipeline_profiles"
+
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), primary_key=True)
+    chunking: Mapped[str] = mapped_column(String(40), nullable=False)
+    embedding: Mapped[str] = mapped_column(String(40), nullable=False)
+    vector_store: Mapped[str] = mapped_column(String(40), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class StructuredRecordRow(Base):
     """A structured business record in Postgres (ADR 0003).
 
