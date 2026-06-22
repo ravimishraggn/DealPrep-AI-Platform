@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import ClassVar
 
 from pipeline.contracts import ExtractionResult, RawRecord
 
@@ -17,6 +18,9 @@ class BaseExtractor(ABC):
     documents, structured records, or both. The base class is deliberately
     minimal — the engine only ever calls ``extract``.
     """
+
+    #: True for real extractors; False for POC stubs that raise ExtractorError.
+    implemented: ClassVar[bool] = True
 
     @abstractmethod
     def extract(self, raw_payload: RawRecord) -> ExtractionResult:
