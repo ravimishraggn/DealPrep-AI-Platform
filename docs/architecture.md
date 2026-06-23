@@ -83,6 +83,14 @@ that reads across tenants.
 | [0011](adr/0011-vector-store-selection.md) | Vector store registry + selection guide | `pipeline/vectorstore/` |
 | [0012](adr/0012-per-tenant-pipeline-profile.md) | Per-tenant pipeline profile (defaults + override) | `app/profiles.py`, `app/routers/profiles.py` |
 | [0013](adr/0013-multi-agent-orchestration.md) | Multi-agent orchestration (fan-out/fan-in + synthesis) | `agents/`, `app/routers/analyze.py` |
+| [0014](adr/0014-semantic-model-layer.md) | Semantic Model (Cortex Analyst equivalent) — NL→SQL with YAML metric/dimension contracts | `pipeline/semantic/`, `agents/semantic_model_agent.py` |
+| [0015](adr/0015-safety-guardrails-layer.md) | Safety & Guardrails (Cortex Guard equivalent) — PII, injection, cost metering, audit log, RLS | `pipeline/guards/`, `app/routers/usage.py`, `app/routers/audit.py` |
+| [0016](adr/0016-cost-saving-strategy.md) | Cost-saving strategy across all 7 layers — model routing, caching, dedup, eligibility checks | `app/llm.py`, `pipeline/cache/`, `pipeline/maintenance/` |
+| [0017](adr/0017-agent-orchestration-evaluation.md) | Agent orchestration evaluation framework — 5-dimension OQS, golden dataset, CI eval suite | `tests/evaluation/`, `docs/evaluation/orchestration-evaluation.md` |
+| [0018](adr/0018-analyst-dashboard.md) | Analyst Dashboard — Jinja2 + HTMX deal room UI, HITL panel, session history, usage view | `app/templates/`, `app/routers/ui.py` |
+| [0019](adr/0019-observability-monitoring.md) | Observability — OTel traces, Prometheus metrics, structured logging, Grafana dashboards + alerts | `app/telemetry.py`, `app/metrics.py`, `monitoring/` |
+| [0020](adr/0020-authentication-api-keys.md) | Authentication — API keys (SHA-256 hashed), session JWTs, tenant-scoped access, admin keys | `app/auth.py`, `app/routers/auth.py` |
+| [0021](adr/0021-mcp-tool-exposure.md) | MCP Tool Exposure — standard tool protocol for Claude Desktop, LangGraph, external LLM hosts | `app/mcp_server.py`, `app/routers/mcp_tools.py` |
 
 **Pluggable-strategy seam:** chunking, embedding, and vector store are each a name-keyed
 registry (like connectors/extractors). A tenant's choices live in a validated
@@ -111,6 +119,16 @@ runbook.
 | Chunking | [chunking-evaluation.md](evaluation/chunking-evaluation.md) |
 | Embedding | [embedding-evaluation.md](evaluation/embedding-evaluation.md) |
 | Vector store | [vectorstore-evaluation.md](evaluation/vectorstore-evaluation.md) |
+
+## Snowflake Cortex AI parity
+
+See [`docs/cortex-ai-mapping.md`](cortex-ai-mapping.md) for the full component-by-component
+mapping.  Overall coverage is **~72%** of Cortex AI's reference architecture as of Phase 7.
+
+| Phase 8 priority | Gap | ADR |
+|---|---|---|
+| **Semantic query layer** | `StructuredAgent` does FTS only — no NL→SQL, no metric definitions | [ADR 0014](adr/0014-semantic-model-layer.md) |
+| **Safety & guardrails** | No PII redaction, injection detection, cost metering, or audit log | [ADR 0015](adr/0015-safety-guardrails-layer.md) |
 
 ## Per-run observability
 

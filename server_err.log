@@ -1,0 +1,46 @@
+INFO:     Started server process [36260]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8077 (Press CTRL+C to quit)
+Run time of job "_sync_jobs (trigger: interval[0:00:05], next run at: 2026-06-22 18:46:29 UTC)" was missed by 0:00:02.251258
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-22 18:46:29 UTC)" was missed by 0:00:07.241769
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-22 18:46:29 UTC)" was missed by 0:00:07.232078
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-22 18:46:29 UTC)" was missed by 0:00:07.232078
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-22 18:46:29 UTC)" was missed by 0:00:07.232078
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-22 18:46:29 UTC)" was missed by 0:00:07.232078
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-22 18:46:29 UTC)" was missed by 0:00:07.232078
+Execution of job "_sync_jobs (trigger: interval[0:00:05], next run at: 2026-06-23 02:48:49 UTC)" skipped: maximum number of running instances reached (1)
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:08:39 UTC)" was missed by 0:00:05.757540
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:08:39 UTC)" was missed by 0:00:05.756468
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:08:39 UTC)" was missed by 0:00:05.756995
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:08:39 UTC)" was missed by 0:00:05.756995
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:08:39 UTC)" was missed by 0:00:05.756995
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:08:39 UTC)" was missed by 0:00:05.758003
+Run time of job "_sync_jobs (trigger: interval[0:00:05], next run at: 2026-06-23 08:09:24 UTC)" was missed by 0:00:01.435289
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:09:29 UTC)" was missed by 0:00:01.425800
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:09:29 UTC)" was missed by 0:00:01.415096
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:09:29 UTC)" was missed by 0:00:01.415096
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:09:29 UTC)" was missed by 0:00:01.415096
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:09:29 UTC)" was missed by 0:00:01.415096
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:09:29 UTC)" was missed by 0:00:01.415096
+Run time of job "_sync_jobs (trigger: interval[0:00:05], next run at: 2026-06-23 08:25:34 UTC)" was missed by 0:00:04.196547
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:25:39 UTC)" was missed by 0:00:04.187058
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:25:39 UTC)" was missed by 0:00:04.176354
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:25:39 UTC)" was missed by 0:00:04.176354
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:25:39 UTC)" was missed by 0:00:04.176354
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:25:39 UTC)" was missed by 0:00:04.177353
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 08:25:39 UTC)" was missed by 0:00:04.177353
+Run time of job "_sync_jobs (trigger: interval[0:00:05], next run at: 2026-06-23 10:02:34 UTC)" was missed by 0:00:04.003969
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 10:02:39 UTC)" was missed by 0:00:03.997482
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 10:02:39 UTC)" was missed by 0:00:03.986778
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 10:02:39 UTC)" was missed by 0:00:03.986778
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 10:02:39 UTC)" was missed by 0:00:03.986778
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 10:02:39 UTC)" was missed by 0:00:03.986778
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 10:02:39 UTC)" was missed by 0:00:03.986778
+Run time of job "_sync_jobs (trigger: interval[0:00:05], next run at: 2026-06-23 11:58:54 UTC)" was missed by 0:00:04.603640
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 11:58:59 UTC)" was missed by 0:00:04.598160
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 11:58:59 UTC)" was missed by 0:00:04.588455
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 11:58:59 UTC)" was missed by 0:00:04.588455
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 11:58:59 UTC)" was missed by 0:00:04.588455
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 11:58:59 UTC)" was missed by 0:00:04.589455
+Run time of job "run_source (trigger: interval[0:00:10], next run at: 2026-06-23 11:58:59 UTC)" was missed by 0:00:04.622492

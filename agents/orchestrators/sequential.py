@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 
-from agents.base import AgentResult, AnalysisContext, AnalysisState
+from agents.base import AgentResult, AnalysisContext, AnalysisOutcome, AnalysisState
 from agents.orchestrators.base import BaseOrchestrator
 from agents.registry import AGENT_REGISTRY
 
@@ -37,7 +38,8 @@ class SequentialOrchestrator(BaseOrchestrator):
         self._agents = {name: AGENT_REGISTRY[name]() for name in AGENT_REGISTRY
                         if name not in ("sequential", "langgraph")}
 
-    async def analyze(self, ctx: AnalysisContext) -> AnalysisState:
+    async def analyze(self, ctx: AnalysisContext, session_id: str | None = None) -> AnalysisOutcome:
+        sid = session_id or str(uuid.uuid4())
         state = AnalysisState(context=ctx)
 
         # ── Phase 1: three retrieval agents run in parallel ──────────────────
@@ -53,7 +55,6 @@ class SequentialOrchestrator(BaseOrchestrator):
                 if outcome.status == "failed":
                     state.warnings.append(f"{name} failed: {outcome.error}")
             else:
-                # asyncio.gather return_exceptions=True — outcome is an Exception
                 state.results[name] = AgentResult(
                     agent=name, status="failed", payload={},
                     error=str(outcome),
@@ -79,7 +80,7 @@ class SequentialOrchestrator(BaseOrchestrator):
                 state.warnings.append(f"{name} raised: {exc}")
                 logger.exception("post-processing agent %s raised", name)
 
-        return state
+        return AnalysisOutcome(state=state, session_id=sid, orchestrator="sequential")
 
 
 # Module-level singleton — one orchestrator per process.

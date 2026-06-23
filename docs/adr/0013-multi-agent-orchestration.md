@@ -277,6 +277,87 @@ LangGraph implementation can be swapped in as a profile option.
 
 ---
 
+## Implementation addendum — LangGraph orchestrator (Phase 7b)
+
+These are the **implementation-level decisions** made when promoting the LangGraph stub to
+`implemented = True`. The architectural decision (use LangGraph for production) was already
+made above; this section records *how*.
+
+### A — State schema and reducers
+
+`OrchestratorState` is a `TypedDict` compiled into the `StateGraph`. Fields written by
+concurrent (parallel) nodes use `Annotated[T, reducer]` to guarantee safe fan-in:
+
+| Field | Reducer | Rationale |
+|---|---|---|
+| `retrieved_chunks` | `operator.add` | Only DocumentResearcher writes; list-append is safe |
+| `retrieved_records` | `operator.add` | Only StructuredAgent writes |
+| `retrieved_triples` | `operator.add` | Only GraphAgent writes |
+| `warnings` | `operator.add` | Any node may append a warning; must not lose any |
+| `agent_timings` | `{**a, **b}` dict merge | Each node adds its own key; no conflict |
+
+Fields written only by sequential nodes (risk_score, answer, human_approved) use the default
+last-write-wins semantic — single writer at a time, no conflict.
+
+### B — Fan-out/fan-in mechanism
+
+Three parallel retrieval nodes are connected with **multiple edges from a common source**:
+```
+load_memory → document_researcher_node
+load_memory → structured_agent_node
+load_memory → graph_agent_node
+```
+LangGraph's super-step execution runs all three simultaneously. Fan-in is three **convergent
+edges into a single node**:
+```
+document_researcher_node → risk_scorer_node
+structured_agent_node    → risk_scorer_node
+graph_agent_node         → risk_scorer_node
+```
+`risk_scorer_node` only starts when all three of its incoming edges are satisfied.
+Reducers accumulate the partial state updates from the three parallel nodes before the
+fan-in node sees a consistent state.
+
+### C — Short-term memory: MemorySaver (checkpointing)
+
+`MemorySaver` is the in-process checkpointer. Thread ID convention: `{tenant_id}:{session_id}`.
+This guarantees sessions never cross tenant boundaries — a session_id collision with a different
+tenant maps to a different thread_id and a different checkpoint sequence.
+
+`MemorySaver` limitations: (1) in-RAM — lost on restart; (2) unbounded — long-running servers
+accumulate all completed analysis states. Production upgrade path: `PostgresSaver` (LangGraph
+has a first-party Postgres checkpointer). Flagged for Phase 8.
+
+### D — Long-term memory: Postgres AnalysisHistory
+
+A new `analysis_history` table in Postgres stores completed analyses (query, risk_score, answer,
+citations, tenant_id). The `load_memory_node` at graph START loads the last 5 analyses for the
+same tenant, so SynthesisAgent can reference patterns across sessions ("this entity has been
+flagged as related-party in 3 prior analyses"). Not a vector store — plain SQL, last-5 recency.
+
+### E — Human-in-the-loop: `interrupt_before`
+
+The graph is compiled with `interrupt_before=["human_review_node"]`. When `risk_score >= 0.7`,
+the conditional router directs to `human_review_node`. The graph pauses before entering the
+node; `ainvoke` returns with partial state. The caller checks `graph.get_state(config).next`
+— if non-empty, the graph is waiting.
+
+Resume flow:
+1. Analyst reviews risk signals via `GET /analyze/{session_id}/status`
+2. Analyst approves/rejects via `POST /analyze/{session_id}/resume`
+3. Router calls `graph.update_state(config, {"human_approved": True, "human_feedback": "…"})`
+4. Router calls `graph.invoke(None, config)` — graph continues from `human_review_node`
+
+`human_review_node` applies the approval: if `human_approved=False`, routing goes to `abort`
+(skips synthesis, saves memory, returns partial result with warning).
+
+### F — Dependency
+
+`langgraph>=0.2.14` added to `requirements.txt`. Pulls `langchain-core>=0.2`.
+This adds ~25 MB to the installed footprint. Acceptable for the agent layer.
+The sequential orchestrator remains the default for environments that cannot install
+langchain-core (CI, air-gapped, constrained Docker images).
+
 ## Follow-up actions (Phase 8 backlog)
 
 | Action | Reason |

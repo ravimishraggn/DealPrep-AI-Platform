@@ -8,7 +8,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
-from agents.base import AnalysisContext, AnalysisState
+from agents.base import AnalysisContext, AnalysisOutcome, AnalysisState
 
 
 class BaseOrchestrator(ABC):
@@ -18,14 +18,17 @@ class BaseOrchestrator(ABC):
     implemented: ClassVar[bool] = True
 
     @abstractmethod
-    async def analyze(self, ctx: AnalysisContext) -> AnalysisState:
-        """Execute the full agent pipeline and return the completed state.
+    async def analyze(self, ctx: AnalysisContext, session_id: str | None = None) -> AnalysisOutcome:
+        """Execute the full agent pipeline and return an ``AnalysisOutcome``.
 
         Args:
             ctx: Immutable query context (tenant, query, profile choices).
+            session_id: Optional caller-supplied session identifier used for
+                checkpointing and long-term memory lookup. Auto-generated if
+                ``None``.
 
         Returns:
-            Completed ``AnalysisState`` with answer, citations, risk score,
-            per-agent results, and any warnings.
+            ``AnalysisOutcome`` containing the completed (or interrupted) state,
+            the resolved session_id, and flags for HITL interruption.
         """
         raise NotImplementedError

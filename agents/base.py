@@ -46,6 +46,17 @@ class AnalysisState:
     warnings: list[str] = field(default_factory=list)
 
 
+@dataclass
+class AnalysisOutcome:
+    """Richer return type from orchestrators — wraps state + metadata."""
+
+    state: AnalysisState
+    session_id: str
+    orchestrator: str
+    interrupted: bool = False
+    pending_approval: dict | None = None  # populated when interrupted=True
+
+
 class BaseAgent(ABC):
     """Minimal interface every agent must satisfy."""
 

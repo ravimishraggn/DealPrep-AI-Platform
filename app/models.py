@@ -156,6 +156,33 @@ class TenantPipelineProfile(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class AnalysisHistory(Base):
+    """Long-term memory for the agent orchestration layer (ADR 0013 §D).
+
+    Every completed analysis is written here so future sessions for the same
+    tenant can reference prior findings — patterns, recurring entities, prior
+    risk flags. Loaded at graph START by the ``load_memory_node``.
+    """
+
+    __tablename__ = "analysis_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
+    session_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    orchestrator: Mapped[str] = mapped_column(String(40), nullable=False, default="sequential")
+    risk_score: Mapped[float | None] = mapped_column(nullable=True)
+    answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    citations: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
+    risk_signals: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
+    interrupted: Mapped[bool] = mapped_column(nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    __table_args__ = (
+        Index("ix_analysis_history_tenant_created", "tenant_id", "created_at"),
+    )
+
+
 class StructuredRecordRow(Base):
     """A structured business record in Postgres (ADR 0003).
 
